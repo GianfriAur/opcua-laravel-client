@@ -47,7 +47,7 @@ This package brings OPC UA communication into the Laravel ecosystem with a famil
 - **Transparent session management** &mdash; when the session manager daemon is running, connections are automatically persisted across HTTP requests; when it is not, the package falls back to direct per-request connections with zero code changes
 - **Artisan integration** &mdash; start the session manager daemon with `php artisan opcua:session`
 - **Environment-driven configuration** &mdash; endpoints, security policies, credentials and certificates are all configurable via `.env`
-- **Laravel 10, 11, and 12** compatibility
+- **Laravel 11 and 12** compatibility
 
 ## Requirements
 
@@ -55,7 +55,7 @@ This package brings OPC UA communication into the Laravel ecosystem with a famil
 |---|---|
 | PHP | >= 8.2 |
 | ext-openssl | * |
-| Laravel | 10.x, 11.x, or 12.x |
+| Laravel | 11.x or 12.x |
 
 ## Installation
 
