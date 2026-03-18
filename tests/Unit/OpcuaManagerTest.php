@@ -376,6 +376,77 @@ describe('OpcuaManager', function () {
         });
     });
 
+    describe('configureClient certificate behavior', function () {
+
+        it('does not call setClientCertificate when both cert and key are absent', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldNotReceive('setClientCertificate');
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, [
+                'client_certificate' => null,
+                'client_key' => null,
+            ]);
+        });
+
+        it('does not call setClientCertificate when only client_certificate is set', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldNotReceive('setClientCertificate');
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, [
+                'client_certificate' => '/path/to/cert.pem',
+                'client_key' => null,
+            ]);
+        });
+
+        it('does not call setClientCertificate when only client_key is set', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldNotReceive('setClientCertificate');
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, [
+                'client_certificate' => null,
+                'client_key' => '/path/to/key.pem',
+            ]);
+        });
+
+        it('calls setClientCertificate when both client_certificate and client_key are set', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldReceive('setClientCertificate')
+                ->once()
+                ->with('/path/cert.pem', '/path/key.pem', null)
+                ->andReturnSelf();
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, [
+                'client_certificate' => '/path/cert.pem',
+                'client_key'         => '/path/key.pem',
+            ]);
+        });
+
+        it('passes ca_certificate as third argument when provided', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldReceive('setClientCertificate')
+                ->once()
+                ->with('/path/cert.pem', '/path/key.pem', '/path/ca.pem')
+                ->andReturnSelf();
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, [
+                'client_certificate' => '/path/cert.pem',
+                'client_key'         => '/path/key.pem',
+                'ca_certificate'     => '/path/ca.pem',
+            ]);
+        });
+
+    });
+
     describe('__call proxy', function () {
 
         it('proxies method calls to the default connection', function () {

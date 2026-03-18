@@ -137,6 +137,26 @@ describe('Connection via OpcuaManager (direct mode)', function () {
         }
     })->group('integration');
 
+    it('connects with security policy but no client certificate (auto-generated)', function () {
+        $manager = TestHelper::createDirectManager([
+            'connections' => [
+                'default' => [
+                    'endpoint' => TestHelper::ENDPOINT_AUTO_ACCEPT,
+                    'security_policy' => 'Basic256Sha256',
+                    'security_mode' => 'SignAndEncrypt',
+                    // No client_certificate / client_key — auto-generation kicks in
+                ],
+            ],
+        ]);
+        try {
+            $client = $manager->connect();
+            $refs = $client->browse(NodeId::numeric(0, 85));
+            expect($refs)->toBeArray()->not->toBeEmpty();
+        } finally {
+            TestHelper::safeDisconnect('default', $manager);
+        }
+    })->group('integration');
+
     it('connects with certificate config', function () {
         $manager = TestHelper::createDirectManager([
             'connections' => [
@@ -204,6 +224,26 @@ describe('Connection via OpcuaManager (managed mode)', function () {
                     'client_certificate' => TestHelper::getClientCertPath(),
                     'client_key' => TestHelper::getClientKeyPath(),
                     'ca_certificate' => TestHelper::getCaCertPath(),
+                ],
+            ],
+        ]);
+        try {
+            $client = $manager->connect();
+            $refs = $client->browse(NodeId::numeric(0, 85));
+            expect($refs)->toBeArray()->not->toBeEmpty();
+        } finally {
+            TestHelper::safeDisconnect('default', $manager);
+        }
+    })->group('integration');
+
+    it('connects with security policy but no client certificate via daemon (auto-generated)', function () {
+        $manager = TestHelper::createManagedManager([
+            'connections' => [
+                'default' => [
+                    'endpoint' => TestHelper::ENDPOINT_AUTO_ACCEPT,
+                    'security_policy' => 'Basic256Sha256',
+                    'security_mode' => 'SignAndEncrypt',
+                    // No client_certificate / client_key — auto-generation kicks in
                 ],
             ],
         ]);

@@ -60,7 +60,8 @@ return [
             'username' => env('OPCUA_USERNAME'),
             'password' => env('OPCUA_PASSWORD'),
 
-            // Client certificate (optional)
+            // Client certificate (optional — if omitted, a self-signed certificate is
+            // auto-generated in memory when a security policy/mode is active)
             'client_certificate' => env('OPCUA_CLIENT_CERT'),
             'client_key' => env('OPCUA_CLIENT_KEY'),
             'ca_certificate' => env('OPCUA_CA_CERT'),
