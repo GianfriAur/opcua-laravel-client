@@ -23,7 +23,11 @@ This package brings OPC UA communication into the Laravel ecosystem with a famil
   - [Reading Values](#reading-values)
   - [Writing Values](#writing-values)
   - [Browsing the Address Space](#browsing-the-address-space)
+  - [Recursive Browsing](#recursive-browsing)
+  - [Path Resolution](#path-resolution)
   - [Reading Multiple Values](#reading-multiple-values)
+  - [Connection State and Reconnect](#connection-state-and-reconnect)
+  - [Timeout and Auto-Retry](#timeout-and-auto-retry)
   - [Calling Methods](#calling-methods)
   - [Subscriptions and Monitored Items](#subscriptions-and-monitored-items)
   - [Historical Data Access](#historical-data-access)
@@ -37,6 +41,7 @@ This package brings OPC UA communication into the Laravel ecosystem with a famil
   - [Production Deployment](#production-deployment)
   - [Architecture](#architecture)
 - [Testing](#testing)
+- [Ecosystem](#ecosystem)
 - [License](#license)
 
 ## Features
@@ -47,6 +52,12 @@ This package brings OPC UA communication into the Laravel ecosystem with a famil
 - **Transparent session management** &mdash; when the session manager daemon is running, connections are automatically persisted across HTTP requests; when it is not, the package falls back to direct per-request connections with zero code changes
 - **Artisan integration** &mdash; start the session manager daemon with `php artisan opcua:session`
 - **Environment-driven configuration** &mdash; endpoints, security policies, credentials and certificates are all configurable via `.env`
+- **Configurable timeout** &mdash; per-connection I/O timeout via config or fluent API
+- **Auto-retry** &mdash; automatic reconnection and retry on connection failures
+- **Transparent batching** &mdash; `readMulti`/`writeMulti` calls are automatically split when exceeding server limits
+- **Recursive browsing** &mdash; `browseAll()`, `browseRecursive()` with configurable depth and cycle detection
+- **Path resolution** &mdash; `resolveNodeId('/Objects/Server/ServerStatus')` for human-readable path navigation
+- **Connection state tracking** &mdash; `isConnected()`, `getConnectionState()`, `reconnect()`
 - **Laravel 11 and 12** compatibility
 
 ## Requirements
@@ -107,6 +118,19 @@ OPCUA_CA_CERT=/path/to/ca.pem
 **Supported security policies:** `None`, `Basic128Rsa15`, `Basic256`, `Basic256Sha256`, `Aes128Sha256RsaOaep`, `Aes256Sha256RsaPss`
 
 **Supported security modes:** `None`, `Sign`, `SignAndEncrypt`
+
+### Client Behaviour (v2.0)
+
+Optional per-connection settings for timeout, retry and batching behaviour:
+
+```dotenv
+OPCUA_TIMEOUT=10.0
+OPCUA_AUTO_RETRY=3
+OPCUA_BATCH_SIZE=100
+OPCUA_BROWSE_MAX_DEPTH=20
+```
+
+These can also be set per-connection in `config/opcua.php` or via the fluent API on the client instance.
 
 ### Session Manager
 
@@ -209,6 +233,50 @@ foreach ($references as $ref) {
 $client->disconnect();
 ```
 
+### Recursive Browsing
+
+```php
+use Gianfriaur\OpcuaPhpClient\Types\BrowseDirection;
+
+$client = Opcua::connect();
+
+$allRefs = $client->browseAll(NodeId::numeric(0, 85));
+
+$tree = $client->browseRecursive(NodeId::numeric(0, 85), maxDepth: 3);
+
+foreach ($tree as $node) {
+    echo $node->getDisplayName() . PHP_EOL;
+    foreach ($node->getChildren() as $child) {
+        echo '  ' . $child->getDisplayName() . PHP_EOL;
+    }
+}
+
+$client->disconnect();
+```
+
+### Path Resolution
+
+```php
+$client = Opcua::connect();
+
+$nodeId = $client->resolveNodeId('/Objects/Server/ServerStatus');
+$dv = $client->read($nodeId);
+
+use Gianfriaur\OpcuaPhpClient\Types\QualifiedName;
+
+$results = $client->translateBrowsePaths([
+    [
+        'startingNodeId' => NodeId::numeric(0, 84),
+        'relativePath' => [
+            ['targetName' => new QualifiedName(0, 'Objects')],
+            ['targetName' => new QualifiedName(0, 'Server')],
+        ],
+    ],
+]);
+
+$client->disconnect();
+```
+
 ### Reading Multiple Values
 
 ```php
@@ -225,6 +293,39 @@ foreach ($values as $dataValue) {
 }
 
 $client->disconnect();
+```
+
+### Connection State and Reconnect
+
+```php
+use Gianfriaur\OpcuaPhpClient\Types\ConnectionState;
+
+$client = Opcua::connect();
+
+echo $client->isConnected();           // true
+echo $client->getConnectionState();    // ConnectionState::Connected
+
+// Reconnect (e.g. after a network interruption)
+$client->reconnect();
+
+$client->disconnect();
+echo $client->getConnectionState();    // ConnectionState::Disconnected
+```
+
+### Timeout and Auto-Retry
+
+```php
+// Via config (config/opcua.php)
+// 'timeout' => 10.0,      // seconds
+// 'auto_retry' => 3,      // max retries on ConnectionException
+// 'batch_size' => 100,     // items per readMulti/writeMulti batch
+
+// Or via fluent API
+$client = Opcua::connection();
+$client->setTimeout(10.0)
+    ->setAutoRetry(3)
+    ->setBatchSize(100)
+    ->connect('opc.tcp://...');
 ```
 
 ### Calling Methods
@@ -462,6 +563,17 @@ Run the integration tests (requires the [opcua-test-server-suite](https://github
 ```bash
 vendor/bin/pest --group=integration
 ```
+
+## Ecosystem
+
+This package is part of a broader OPC UA ecosystem for PHP:
+
+| Package | Description |
+|---------|-------------|
+| [opcua-php-client](https://github.com/GianfriAur/opcua-php-client) | Pure PHP OPC UA client library |
+| [opcua-php-client-session-manager](https://github.com/GianfriAur/opcua-php-client-session-manager) | Session persistence and management across PHP requests, bridging OPC UA's long-lived sessions with PHP's short-lived request model |
+| [opcua-laravel-client](https://github.com/GianfriAur/opcua-laravel-client) | Laravel integration for OPC UA (this package) |
+| [opcua-test-server-suite](https://github.com/GianfriAur/opcua-test-server-suite) | Docker-based OPC UA test server suite with multiple security configurations, custom data types, and a comprehensive address space for integration testing |
 
 ## License
 

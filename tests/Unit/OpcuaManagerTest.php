@@ -447,6 +447,122 @@ describe('OpcuaManager', function () {
 
     });
 
+    describe('configureClient v2.0 options', function () {
+
+        it('applies timeout when configured', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldReceive('setTimeout')
+                ->once()
+                ->with(15.0)
+                ->andReturnSelf();
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, ['timeout' => 15.0]);
+        });
+
+        it('does not call setTimeout when timeout is null', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldNotReceive('setTimeout');
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, ['timeout' => null]);
+        });
+
+        it('applies auto_retry when configured', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldReceive('setAutoRetry')
+                ->once()
+                ->with(3)
+                ->andReturnSelf();
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, ['auto_retry' => 3]);
+        });
+
+        it('does not call setAutoRetry when auto_retry is null', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldNotReceive('setAutoRetry');
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, ['auto_retry' => null]);
+        });
+
+        it('applies batch_size when configured', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldReceive('setBatchSize')
+                ->once()
+                ->with(100)
+                ->andReturnSelf();
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, ['batch_size' => 100]);
+        });
+
+        it('applies batch_size=0 to disable batching', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldReceive('setBatchSize')
+                ->once()
+                ->with(0)
+                ->andReturnSelf();
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, ['batch_size' => 0]);
+        });
+
+        it('does not call setBatchSize when batch_size is null', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldNotReceive('setBatchSize');
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, ['batch_size' => null]);
+        });
+
+        it('applies browse_max_depth when configured', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldReceive('setDefaultBrowseMaxDepth')
+                ->once()
+                ->with(20)
+                ->andReturnSelf();
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, ['browse_max_depth' => 20]);
+        });
+
+        it('does not call setDefaultBrowseMaxDepth when browse_max_depth is null', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldNotReceive('setDefaultBrowseMaxDepth');
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, ['browse_max_depth' => null]);
+        });
+
+        it('applies all v2.0 options together', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldReceive('setTimeout')->once()->with(10.0)->andReturnSelf();
+            $mock->shouldReceive('setAutoRetry')->once()->with(2)->andReturnSelf();
+            $mock->shouldReceive('setBatchSize')->once()->with(50)->andReturnSelf();
+            $mock->shouldReceive('setDefaultBrowseMaxDepth')->once()->with(15)->andReturnSelf();
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, [
+                'timeout' => 10.0,
+                'auto_retry' => 2,
+                'batch_size' => 50,
+                'browse_max_depth' => 15,
+            ]);
+        });
+    });
+
     describe('__call proxy', function () {
 
         it('proxies method calls to the default connection', function () {

@@ -62,7 +62,7 @@ jobs:
 
       - name: Start OPC UA test servers
         id: opcua
-        uses: GianfriAur/opcua-test-server-suite@v1.1.2
+        uses: GianfriAur/opcua-test-server-suite@v1.1.4
 
       - name: Run integration tests
         env:

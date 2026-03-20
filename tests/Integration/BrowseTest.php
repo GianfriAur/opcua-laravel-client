@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Gianfriaur\OpcuaLaravel\Tests\Integration\Helpers\TestHelper;
+use Gianfriaur\OpcuaPhpClient\Types\BrowseDirection;
 use Gianfriaur\OpcuaPhpClient\Types\NodeClass;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 
@@ -97,7 +98,7 @@ foreach (['direct' => 'createDirectManager', 'managed' => 'createManagedManager'
                 $client = $manager->connect();
                 $testServerNodeId = TestHelper::browseToNode($client, ['TestServer']);
 
-                $refs = $client->browse($testServerNodeId, direction: 1);
+                $refs = $client->browse($testServerNodeId, direction: BrowseDirection::Inverse);
 
                 expect($refs)->toBeArray()->not->toBeEmpty();
                 foreach ($refs as $ref) {
@@ -115,7 +116,7 @@ foreach (['direct' => 'createDirectManager', 'managed' => 'createManagedManager'
 
                 $refs = $client->browse(
                     NodeId::numeric(0, 85),
-                    direction: 0,
+                    direction: BrowseDirection::Forward,
                     referenceTypeId: NodeId::numeric(0, 35),
                     includeSubtypes: true,
                 );

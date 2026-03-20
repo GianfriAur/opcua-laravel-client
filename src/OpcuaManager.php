@@ -134,6 +134,26 @@ class OpcuaManager
                 $config['user_key'],
             );
         }
+
+        // Timeout
+        if (isset($config['timeout']) && $config['timeout'] !== null) {
+            $client->setTimeout((float) $config['timeout']);
+        }
+
+        // Auto-retry
+        if (isset($config['auto_retry']) && $config['auto_retry'] !== null) {
+            $client->setAutoRetry((int) $config['auto_retry']);
+        }
+
+        // Batch size
+        if (isset($config['batch_size']) && $config['batch_size'] !== null) {
+            $client->setBatchSize((int) $config['batch_size']);
+        }
+
+        // Browse max depth
+        if (isset($config['browse_max_depth']) && $config['browse_max_depth'] !== null) {
+            $client->setDefaultBrowseMaxDepth((int) $config['browse_max_depth']);
+        }
     }
 
     /**

@@ -53,6 +53,10 @@ describe('opcua config', function () {
             'ca_certificate',
             'user_certificate',
             'user_key',
+            'timeout',
+            'auto_retry',
+            'batch_size',
+            'browse_max_depth',
         ]);
     });
 
