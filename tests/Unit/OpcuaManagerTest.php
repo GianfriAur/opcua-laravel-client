@@ -677,4 +677,239 @@ describe('OpcuaManager', function () {
             expect($result)->toBe([]);
         });
     });
+
+    describe('resolveSecurityPolicyUri', function () {
+
+        $method = fn() => new ReflectionMethod(OpcuaManager::class, 'resolveSecurityPolicyUri');
+
+        it('resolves "None" to the full URI', function () use ($method) {
+            $manager = new OpcuaManager(makeConfig());
+            $result = $method()->invoke($manager, 'None');
+            expect($result)->toBe(SecurityPolicy::None->value);
+        });
+
+        it('resolves "Basic128Rsa15" to the full URI', function () use ($method) {
+            $manager = new OpcuaManager(makeConfig());
+            $result = $method()->invoke($manager, 'Basic128Rsa15');
+            expect($result)->toBe(SecurityPolicy::Basic128Rsa15->value);
+        });
+
+        it('resolves "Basic256" to the full URI', function () use ($method) {
+            $manager = new OpcuaManager(makeConfig());
+            $result = $method()->invoke($manager, 'Basic256');
+            expect($result)->toBe(SecurityPolicy::Basic256->value);
+        });
+
+        it('resolves "Basic256Sha256" to the full URI', function () use ($method) {
+            $manager = new OpcuaManager(makeConfig());
+            $result = $method()->invoke($manager, 'Basic256Sha256');
+            expect($result)->toBe(SecurityPolicy::Basic256Sha256->value);
+        });
+
+        it('resolves "Aes128Sha256RsaOaep" to the full URI', function () use ($method) {
+            $manager = new OpcuaManager(makeConfig());
+            $result = $method()->invoke($manager, 'Aes128Sha256RsaOaep');
+            expect($result)->toBe(SecurityPolicy::Aes128Sha256RsaOaep->value);
+        });
+
+        it('resolves "Aes256Sha256RsaPss" to the full URI', function () use ($method) {
+            $manager = new OpcuaManager(makeConfig());
+            $result = $method()->invoke($manager, 'Aes256Sha256RsaPss');
+            expect($result)->toBe(SecurityPolicy::Aes256Sha256RsaPss->value);
+        });
+
+        it('passes through an already-full URI unchanged', function () use ($method) {
+            $manager = new OpcuaManager(makeConfig());
+            $uri = 'http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256';
+            $result = $method()->invoke($manager, $uri);
+            expect($result)->toBe($uri);
+        });
+
+        it('passes through an unknown string unchanged', function () use ($method) {
+            $manager = new OpcuaManager(makeConfig());
+            $result = $method()->invoke($manager, 'UnknownPolicy');
+            expect($result)->toBe('UnknownPolicy');
+        });
+    });
+
+    describe('resolveSecurityMode', function () {
+
+        $method = fn() => new ReflectionMethod(OpcuaManager::class, 'resolveSecurityMode');
+
+        it('resolves string "None" to SecurityMode::None', function () use ($method) {
+            $manager = new OpcuaManager(makeConfig());
+            expect($method()->invoke($manager, 'None'))->toBe(SecurityMode::None);
+        });
+
+        it('resolves string "Sign" to SecurityMode::Sign', function () use ($method) {
+            $manager = new OpcuaManager(makeConfig());
+            expect($method()->invoke($manager, 'Sign'))->toBe(SecurityMode::Sign);
+        });
+
+        it('resolves string "SignAndEncrypt" to SecurityMode::SignAndEncrypt', function () use ($method) {
+            $manager = new OpcuaManager(makeConfig());
+            expect($method()->invoke($manager, 'SignAndEncrypt'))->toBe(SecurityMode::SignAndEncrypt);
+        });
+
+        it('resolves integer 1 to SecurityMode::None', function () use ($method) {
+            $manager = new OpcuaManager(makeConfig());
+            expect($method()->invoke($manager, 1))->toBe(SecurityMode::None);
+        });
+
+        it('resolves integer 2 to SecurityMode::Sign', function () use ($method) {
+            $manager = new OpcuaManager(makeConfig());
+            expect($method()->invoke($manager, 2))->toBe(SecurityMode::Sign);
+        });
+
+        it('resolves integer 3 to SecurityMode::SignAndEncrypt', function () use ($method) {
+            $manager = new OpcuaManager(makeConfig());
+            expect($method()->invoke($manager, 3))->toBe(SecurityMode::SignAndEncrypt);
+        });
+
+        it('resolves numeric string "2" to SecurityMode::Sign', function () use ($method) {
+            $manager = new OpcuaManager(makeConfig());
+            expect($method()->invoke($manager, '2'))->toBe(SecurityMode::Sign);
+        });
+    });
+
+    describe('configureClient security options', function () {
+
+        it('calls setSecurityPolicy when security_policy is configured', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldReceive('setSecurityPolicy')
+                ->once()
+                ->with(SecurityPolicy::Basic256Sha256)
+                ->andReturnSelf();
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, ['security_policy' => 'Basic256Sha256']);
+        });
+
+        it('does not call setSecurityPolicy when security_policy is null', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldNotReceive('setSecurityPolicy');
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, ['security_policy' => null]);
+        });
+
+        it('calls setSecurityMode when security_mode is configured', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldReceive('setSecurityMode')
+                ->once()
+                ->with(SecurityMode::SignAndEncrypt)
+                ->andReturnSelf();
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, ['security_mode' => 'SignAndEncrypt']);
+        });
+
+        it('does not call setSecurityMode when security_mode is null', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldNotReceive('setSecurityMode');
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, ['security_mode' => null]);
+        });
+
+        it('calls setUserCredentials when username is set', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldReceive('setUserCredentials')
+                ->once()
+                ->with('admin', 'secret')
+                ->andReturnSelf();
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, [
+                'username' => 'admin',
+                'password' => 'secret',
+            ]);
+        });
+
+        it('calls setUserCredentials with empty password when password is absent', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldReceive('setUserCredentials')
+                ->once()
+                ->with('admin', '')
+                ->andReturnSelf();
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, ['username' => 'admin']);
+        });
+
+        it('does not call setUserCredentials when username is null', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldNotReceive('setUserCredentials');
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, ['username' => null]);
+        });
+
+        it('calls setUserCertificate when user_certificate and user_key are set', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldReceive('setUserCertificate')
+                ->once()
+                ->with('/path/user-cert.pem', '/path/user-key.pem')
+                ->andReturnSelf();
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, [
+                'user_certificate' => '/path/user-cert.pem',
+                'user_key'         => '/path/user-key.pem',
+            ]);
+        });
+
+        it('does not call setUserCertificate when only user_certificate is set', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldNotReceive('setUserCertificate');
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, [
+                'user_certificate' => '/path/user-cert.pem',
+                'user_key'         => null,
+            ]);
+        });
+
+        it('does not call setUserCertificate when only user_key is set', function () {
+            $manager = new OpcuaManager(makeConfig());
+            $mock = Mockery::mock(Client::class)->makePartial();
+            $mock->shouldNotReceive('setUserCertificate');
+
+            $method = new ReflectionMethod($manager, 'configureClient');
+            $method->invoke($manager, $mock, [
+                'user_certificate' => null,
+                'user_key'         => '/path/user-key.pem',
+            ]);
+        });
+    });
+
+    describe('connect with null name', function () {
+
+        it('connects the default connection when name is null', function () {
+            $manager = new OpcuaManager(makeConfig([
+                'connections' => [
+                    'default' => ['endpoint' => 'opc.tcp://default-host:4840'],
+                ],
+            ]));
+
+            $mock = Mockery::mock(OpcUaClientInterface::class);
+            $mock->shouldReceive('connect')->once()->with('opc.tcp://default-host:4840');
+
+            $ref = new ReflectionProperty($manager, 'connections');
+            $ref->setValue($manager, ['default' => $mock]);
+
+            $result = $manager->connect(null);
+
+            expect($result)->toBe($mock);
+        });
+    });
 });

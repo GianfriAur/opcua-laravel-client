@@ -45,7 +45,6 @@ class SessionCommand extends Command
         $logger = $this->resolveLogger($config);
         $cache = $this->resolveCache($config);
 
-        // Ensure the directory for the socket exists
         $socketDir = dirname($socketPath);
         if (!is_dir($socketDir)) {
             mkdir($socketDir, 0755, true);
@@ -70,7 +69,7 @@ class SessionCommand extends Command
             ],
         );
 
-        $daemon = new SessionManagerDaemon(
+        $daemon = $this->createDaemon(
             socketPath: $socketPath,
             timeout: (int) $timeout,
             cleanupInterval: (int) $cleanupInterval,
@@ -85,6 +84,45 @@ class SessionCommand extends Command
         $daemon->run();
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Create the session manager daemon instance.
+     *
+     * @param string $socketPath
+     * @param int $timeout
+     * @param int $cleanupInterval
+     * @param ?string $authToken
+     * @param int $maxSessions
+     * @param int $socketMode
+     * @param ?array $allowedCertDirs
+     * @param LoggerInterface $logger
+     * @param ?CacheInterface $clientCache
+     * @return SessionManagerDaemon
+     */
+    protected function createDaemon(
+        string           $socketPath,
+        int              $timeout,
+        int              $cleanupInterval,
+        ?string          $authToken,
+        int              $maxSessions,
+        int              $socketMode,
+        ?array           $allowedCertDirs,
+        LoggerInterface  $logger,
+        ?CacheInterface  $clientCache,
+    ): SessionManagerDaemon
+    {
+        return new SessionManagerDaemon(
+            socketPath: $socketPath,
+            timeout: $timeout,
+            cleanupInterval: $cleanupInterval,
+            authToken: $authToken,
+            maxSessions: $maxSessions,
+            socketMode: $socketMode,
+            allowedCertDirs: $allowedCertDirs,
+            logger: $logger,
+            clientCache: $clientCache,
+        );
     }
 
     /**
