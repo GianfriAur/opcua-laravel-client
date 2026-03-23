@@ -71,10 +71,10 @@ class SessionCommand extends Command
 
         $daemon = $this->createDaemon(
             socketPath: $socketPath,
-            timeout: (int) $timeout,
-            cleanupInterval: (int) $cleanupInterval,
+            timeout: (int)$timeout,
+            cleanupInterval: (int)$cleanupInterval,
             authToken: $authToken,
-            maxSessions: (int) $maxSessions,
+            maxSessions: (int)$maxSessions,
             socketMode: $socketMode,
             allowedCertDirs: $allowedCertDirs,
             logger: $logger,
@@ -101,28 +101,18 @@ class SessionCommand extends Command
      * @return SessionManagerDaemon
      */
     protected function createDaemon(
-        string           $socketPath,
-        int              $timeout,
-        int              $cleanupInterval,
-        ?string          $authToken,
-        int              $maxSessions,
-        int              $socketMode,
-        ?array           $allowedCertDirs,
-        LoggerInterface  $logger,
-        ?CacheInterface  $clientCache,
+        string          $socketPath,
+        int             $timeout,
+        int             $cleanupInterval,
+        ?string         $authToken,
+        int             $maxSessions,
+        int             $socketMode,
+        ?array          $allowedCertDirs,
+        LoggerInterface $logger,
+        ?CacheInterface $clientCache,
     ): SessionManagerDaemon
     {
-        return new SessionManagerDaemon(
-            socketPath: $socketPath,
-            timeout: $timeout,
-            cleanupInterval: $cleanupInterval,
-            authToken: $authToken,
-            maxSessions: $maxSessions,
-            socketMode: $socketMode,
-            allowedCertDirs: $allowedCertDirs,
-            logger: $logger,
-            clientCache: $clientCache,
-        );
+        return new SessionManagerDaemon(socketPath: $socketPath, timeout: $timeout, cleanupInterval: $cleanupInterval, authToken: $authToken, maxSessions: $maxSessions, socketMode: $socketMode, allowedCertDirs: $allowedCertDirs, logger: $logger, clientCache: $clientCache,);
     }
 
     /**
