@@ -1,5 +1,28 @@
 # Changelog
 
+## [4.0.1] - 2026-04-09
+
+### Added
+
+- **Auto-publish.** New `auto_publish` config key in `session_manager` section. When enabled, the daemon automatically calls `publish()` for sessions with active subscriptions and dispatches PSR-14 events (`DataChangeReceived`, `EventNotificationReceived`, `AlarmActivated`, etc.) to Laravel's event system. No manual publish loop required — register listeners in your `EventServiceProvider` to handle notifications.
+- **Per-connection auto-connect.** New `auto_connect` config key per connection. When `true` (and `auto_publish` is enabled), the daemon auto-connects to the endpoint on startup and registers the subscriptions defined in the new `subscriptions` config key. Connections without `auto_connect` are managed imperatively as before.
+- **Declarative subscription config.** New `subscriptions` config key per connection. Define `monitored_items` and `event_monitored_items` directly in `config/opcua.php` — the daemon creates them automatically on startup. Each subscription supports `publishing_interval`, `max_keep_alive_count`, `lifetime_count`, `priority`, and per-item `sampling_interval`, `queue_size`, `client_handle`, `select_fields`.
+- **Event dispatcher injection into daemon.** `SessionCommand` resolves `EventDispatcherInterface` from the Laravel container and passes it to the daemon. All OPC UA client events (47 events) are dispatched through Laravel's event system when auto-publish is active.
+- `SessionCommand::buildAutoConnectConfig()` — reads connections with `auto_connect: true` and builds the daemon's auto-connect configuration.
+- `SessionCommand::mapToDaemonConfig()` — maps Laravel connection config keys (`security_policy`, `timeout`, `client_certificate`, etc.) to the daemon's internal format (`securityPolicy`, `opcuaTimeout`, `clientCertPath`, etc.).
+- `SessionCommand::resolveEventDispatcher()` — resolves `EventDispatcherInterface` from the Laravel container.
+- `SessionCommand::resolveSecurityPolicyUri()` and `resolveSecurityModeValue()` — helper methods for security config mapping.
+- New `.env` variable: `OPCUA_AUTO_PUBLISH`.
+- Auto-publish status displayed in the `opcua:session` startup table.
+- Auto-connect summary displayed before daemon startup when connections are configured.
+- Unit tests for `buildAutoConnectConfig`, `mapToDaemonConfig`, auto-publish flag passing, event dispatcher resolution, auto-connect filtering.
+- New documentation: [Auto-Publish & Monitoring](doc/10-auto-publish.md) with real-world industrial use case.
+
+### Changed
+
+- Updated dependency `php-opcua/opcua-session-manager` from `^4.0.0` to `^4.0.3` (required for auto-publish and auto-connect support).
+- `SessionCommand::createDaemon()` now accepts `?EventDispatcherInterface $clientEventDispatcher` and `bool $autoPublish` parameters.
+
 ## [4.0.0] - 2026-04-7
 
 ### Changed

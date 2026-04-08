@@ -378,6 +378,171 @@ $client->disconnect();
 - In plain Laravel (no daemon), subscriptions die with the request
 - With `php artisan opcua:session` running, subscriptions persist across requests
 - Always `deleteSubscription()` when done
+- **Alternative:** use auto-publish (see next skill) to eliminate the manual `publish()` loop entirely
+
+---
+
+## Skill: Auto-Publish (Automatic Subscription Monitoring)
+
+### When to use
+The user wants OPC UA subscriptions monitored automatically by the daemon without a manual `publish()` loop. Notifications should be handled by Laravel event listeners.
+
+### Step 1: Enable auto-publish
+
+```dotenv
+# .env
+OPCUA_AUTO_PUBLISH=true
+```
+
+```php
+// config/opcua.php
+'session_manager' => [
+    // ... existing config ...
+    'auto_publish' => env('OPCUA_AUTO_PUBLISH', false),
+],
+```
+
+### Step 2: Define connections with auto-connect
+
+```php
+// config/opcua.php
+'connections' => [
+    'plc-1' => [
+        'endpoint' => env('PLC1_ENDPOINT', 'opc.tcp://192.168.1.10:4840'),
+        'username' => env('PLC1_USER'),
+        'password' => env('PLC1_PASS'),
+        'timeout' => 3.0,
+        'auto_retry' => 3,
+
+        'auto_connect' => true,
+
+        'subscriptions' => [
+            [
+                'publishing_interval' => 500.0,
+                'max_keep_alive_count' => 5,
+                'monitored_items' => [
+                    ['node_id' => 'ns=2;s=Temperature',  'client_handle' => 1],
+                    ['node_id' => 'ns=2;s=Pressure',     'client_handle' => 2],
+                    ['node_id' => 'ns=2;s=MachineState', 'client_handle' => 3],
+                ],
+                'event_monitored_items' => [
+                    [
+                        'node_id' => 'i=2253',
+                        'client_handle' => 10,
+                        'select_fields' => [
+                            'EventId', 'EventType', 'SourceName', 'Time',
+                            'Message', 'Severity', 'ActiveState',
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ],
+
+    // On-demand connection — no auto_connect, no subscriptions
+    'historian' => [
+        'endpoint' => env('HISTORIAN_ENDPOINT'),
+    ],
+],
+```
+
+### Step 3: Register event listeners
+
+```php
+// app/Providers/EventServiceProvider.php
+use PhpOpcua\Client\Event\DataChangeReceived;
+use PhpOpcua\Client\Event\AlarmActivated;
+
+protected $listen = [
+    DataChangeReceived::class => [\App\Listeners\StoreSensorReading::class],
+    AlarmActivated::class => [\App\Listeners\HandleAlarm::class],
+];
+```
+
+```php
+// app/Listeners/StoreSensorReading.php
+namespace App\Listeners;
+
+use PhpOpcua\Client\Event\DataChangeReceived;
+use Illuminate\Support\Facades\DB;
+
+class StoreSensorReading
+{
+    public function handle(DataChangeReceived $event): void
+    {
+        DB::table('sensor_readings')->insert([
+            'subscription_id' => $event->subscriptionId,
+            'client_handle'   => $event->clientHandle,
+            'value'           => $event->dataValue->getValue(),
+            'status_code'     => $event->dataValue->statusCode,
+            'source_time'     => $event->dataValue->sourceTimestamp,
+            'server_time'     => $event->dataValue->serverTimestamp,
+            'created_at'      => now(),
+        ]);
+    }
+}
+```
+
+```php
+// app/Listeners/HandleAlarm.php
+namespace App\Listeners;
+
+use PhpOpcua\Client\Event\AlarmActivated;
+use Illuminate\Support\Facades\Log;
+
+class HandleAlarm
+{
+    public function handle(AlarmActivated $event): void
+    {
+        Log::channel('opcua')->warning('Alarm: {source} — {message}', [
+            'source'   => $event->sourceName,
+            'message'  => $event->message,
+            'severity' => $event->severity,
+        ]);
+    }
+}
+```
+
+### Step 4: Start
+
+```bash
+php artisan opcua:session
+```
+
+### Runtime subscriptions
+
+Auto-publish also works for subscriptions created at runtime via the Facade:
+
+```php
+$sub = Opcua::connect('historian')->createSubscription(publishingInterval: 2000.0);
+Opcua::connection('historian')->createMonitoredItems($sub->subscriptionId, [
+    ['nodeId' => 'ns=4;s=HistorianStatus', 'clientHandle' => 200],
+]);
+// No publish() loop — daemon handles it automatically
+```
+
+### Available events
+
+| Event | Properties |
+|-------|-----------|
+| `DataChangeReceived` | subscriptionId, sequenceNumber, clientHandle, dataValue |
+| `EventNotificationReceived` | subscriptionId, clientHandle, eventFields |
+| `AlarmActivated` | subscriptionId, clientHandle, sourceName, message, severity, eventType, time |
+| `AlarmDeactivated` | subscriptionId, clientHandle, sourceName, message |
+| `AlarmAcknowledged` | subscriptionId, clientHandle, sourceName |
+| `LimitAlarmExceeded` | subscriptionId, clientHandle, sourceName, limitState, severity |
+| `SubscriptionKeepAlive` | subscriptionId, sequenceNumber |
+| `PublishResponseReceived` | subscriptionId, sequenceNumber, notificationCount, moreNotifications |
+
+### Important rules
+- Auto-publish requires `auto_publish: true` in session_manager config
+- `auto_connect` is per-connection — only connections with `auto_connect: true` AND `subscriptions` defined are auto-connected
+- Connections without `auto_connect` are still available for imperative use
+- Manual `publish()` calls return an `auto_publish_active` error when auto-publish is active
+- `publish()` is blocking (max `maxKeepAliveCount × publishingInterval` ms) — use `max_keep_alive_count: 5` or lower
+- Connection errors trigger automatic recovery (reconnect + subscription transfer)
+- After 5 consecutive errors, auto-publish stops for that session
+- The daemon must be running (`php artisan opcua:session`) for auto-publish to work
 
 ---
 
@@ -643,6 +808,8 @@ class LogOpcuaReads
 | `auto_accept_force` | `false` | Force-accept changed certs |
 | `auto_detect_write_type` | `true` | Auto-detect on `write()` |
 | `read_metadata_cache` | `true` | Cache node metadata |
+| `auto_connect` | `false` | Auto-connect on daemon startup (requires `auto_publish`) |
+| `subscriptions` | — | Array of subscription definitions for auto-connect |
 
 ### Session manager keys
 
@@ -653,6 +820,7 @@ class LogOpcuaReads
 | `timeout` | `600` | Session inactivity timeout |
 | `auth_token` | `null` | Shared secret for IPC |
 | `max_sessions` | `100` | Max concurrent sessions |
+| `auto_publish` | `false` | Auto-publish for sessions with subscriptions |
 
 ---
 

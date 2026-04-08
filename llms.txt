@@ -25,6 +25,8 @@
 - Read metadata cache — cached node metadata avoids redundant reads; refresh with read($nodeId, refresh: true)
 - Trust store — FileTrustStore with configurable TrustPolicy, auto-accept, certificate management
 - Type Discovery — discoverDataTypes() for server-defined structured types
+- Auto-publish — daemon auto-publishes for sessions with subscriptions, dispatches PSR-14 events to Laravel listeners
+- Auto-connect — per-connection auto_connect with declarative subscriptions config, daemon sets up monitoring on startup
 - Subscription management — createMonitoredItems(), modifyMonitoredItems(), setTriggering(), transferSubscriptions()
 - MockClient for testing — register handlers, assert calls, no server needed
 - Timeout, auto-retry, automatic batching via config or fluent API
@@ -77,6 +79,7 @@ php artisan opcua:session --log-channel=stack --cache-store=redis
 
 Standard: endpoint, security_policy, security_mode, username, password, client_certificate, client_key, ca_certificate, user_certificate, user_key, timeout, auto_retry, batch_size, browse_max_depth
 New in v4: trust_store_path, trust_policy, auto_accept, auto_accept_force, auto_detect_write_type, read_metadata_cache
+New in v4.0.1: auto_publish (session_manager), auto_connect (per-connection), subscriptions (per-connection)
 
 ## Key Method Signatures
 

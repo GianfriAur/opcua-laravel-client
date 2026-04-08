@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
+use PhpOpcua\Client\Security\SecurityMode;
+use PhpOpcua\Client\Security\SecurityPolicy;
 use PhpOpcua\LaravelOpcua\Commands\SessionCommand;
+use Psr\EventDispatcher\EventDispatcherInterface;
 
 if (!function_exists('app')) {
     function app(?string $abstract = null, array $parameters = []): mixed
@@ -87,6 +90,9 @@ function makeSessionCommandApp(array $configOverrides = []): Container
     $app->instance('cache', $cacheManager);
     $app->instance(CacheInterface::class, $cacheMock);
 
+    $eventDispatcher = Mockery::mock(EventDispatcherInterface::class);
+    $app->instance(EventDispatcherInterface::class, $eventDispatcher);
+
     return $app;
 }
 
@@ -101,17 +107,20 @@ function makeTestableCommand(array $configOverrides = []): array
 
     $command = new class extends SessionCommand {
         public array $capturedArgs = [];
+        public ?SessionManagerDaemon $daemonMock = null;
 
         protected function createDaemon(
-            string          $socketPath,
-            int             $timeout,
-            int             $cleanupInterval,
-            ?string         $authToken,
-            int             $maxSessions,
-            int             $socketMode,
-            ?array          $allowedCertDirs,
-            LoggerInterface $logger,
-            ?CacheInterface $clientCache,
+            string                                $socketPath,
+            int                                   $timeout,
+            int                                   $cleanupInterval,
+            ?string                               $authToken,
+            int                                   $maxSessions,
+            int                                   $socketMode,
+            ?array                                $allowedCertDirs,
+            LoggerInterface                       $logger,
+            ?CacheInterface                       $clientCache,
+            ?EventDispatcherInterface             $clientEventDispatcher = null,
+            bool                                  $autoPublish = false,
         ): SessionManagerDaemon {
             $this->capturedArgs = [
                 'socketPath' => $socketPath,
@@ -123,11 +132,14 @@ function makeTestableCommand(array $configOverrides = []): array
                 'allowedCertDirs' => $allowedCertDirs,
                 'logger' => $logger,
                 'clientCache' => $clientCache,
+                'clientEventDispatcher' => $clientEventDispatcher,
+                'autoPublish' => $autoPublish,
             ];
 
-            $mock = Mockery::mock(SessionManagerDaemon::class);
-            $mock->shouldReceive('run')->once();
-            return $mock;
+            $this->daemonMock = Mockery::mock(SessionManagerDaemon::class);
+            $this->daemonMock->shouldReceive('run')->once();
+            $this->daemonMock->shouldReceive('autoConnect')->zeroOrMoreTimes();
+            return $this->daemonMock;
         }
     };
 
@@ -258,19 +270,22 @@ describe('SessionCommand', function () {
                 public array $capturedArgs = [];
 
                 protected function createDaemon(
-                    string          $socketPath,
-                    int             $timeout,
-                    int             $cleanupInterval,
-                    ?string         $authToken,
-                    int             $maxSessions,
-                    int             $socketMode,
-                    ?array          $allowedCertDirs,
-                    LoggerInterface $logger,
-                    ?CacheInterface $clientCache,
+                    string                    $socketPath,
+                    int                       $timeout,
+                    int                       $cleanupInterval,
+                    ?string                   $authToken,
+                    int                       $maxSessions,
+                    int                       $socketMode,
+                    ?array                    $allowedCertDirs,
+                    LoggerInterface           $logger,
+                    ?CacheInterface           $clientCache,
+                    ?EventDispatcherInterface $clientEventDispatcher = null,
+                    bool                      $autoPublish = false,
                 ): SessionManagerDaemon {
                     $this->capturedArgs = compact('logger');
                     $mock = Mockery::mock(SessionManagerDaemon::class);
                     $mock->shouldReceive('run')->once();
+                    $mock->shouldReceive('autoConnect')->zeroOrMoreTimes();
                     return $mock;
                 }
             };
@@ -305,19 +320,22 @@ describe('SessionCommand', function () {
                 public array $capturedArgs = [];
 
                 protected function createDaemon(
-                    string          $socketPath,
-                    int             $timeout,
-                    int             $cleanupInterval,
-                    ?string         $authToken,
-                    int             $maxSessions,
-                    int             $socketMode,
-                    ?array          $allowedCertDirs,
-                    LoggerInterface $logger,
-                    ?CacheInterface $clientCache,
+                    string                    $socketPath,
+                    int                       $timeout,
+                    int                       $cleanupInterval,
+                    ?string                   $authToken,
+                    int                       $maxSessions,
+                    int                       $socketMode,
+                    ?array                    $allowedCertDirs,
+                    LoggerInterface           $logger,
+                    ?CacheInterface           $clientCache,
+                    ?EventDispatcherInterface $clientEventDispatcher = null,
+                    bool                      $autoPublish = false,
                 ): SessionManagerDaemon {
                     $this->capturedArgs = compact('clientCache');
                     $mock = Mockery::mock(SessionManagerDaemon::class);
                     $mock->shouldReceive('run')->once();
+                    $mock->shouldReceive('autoConnect')->zeroOrMoreTimes();
                     return $mock;
                 }
             };
@@ -385,7 +403,6 @@ describe('SessionCommand', function () {
 
             runCommand($command);
 
-            // If we got here without exception, run() was called (Mockery verifies it)
             expect(true)->toBeTrue();
         });
 
@@ -403,6 +420,315 @@ describe('SessionCommand', function () {
 
             @rmdir($dir);
             @rmdir(dirname($dir));
+        });
+    });
+
+    describe('auto-publish', function () {
+
+        it('passes autoPublish=false by default', function () {
+            [$command] = makeTestableCommand();
+
+            runCommand($command);
+
+            expect($command->capturedArgs['autoPublish'])->toBeFalse();
+            expect($command->capturedArgs['clientEventDispatcher'])->toBeNull();
+        });
+
+        it('passes autoPublish=true and event dispatcher when enabled', function () {
+            [$command] = makeTestableCommand(['auto_publish' => true]);
+
+            runCommand($command);
+
+            expect($command->capturedArgs['autoPublish'])->toBeTrue();
+            expect($command->capturedArgs['clientEventDispatcher'])->toBeInstanceOf(EventDispatcherInterface::class);
+        });
+
+        it('displays auto-publish status in startup table', function () {
+            [$command] = makeTestableCommand(['auto_publish' => true]);
+
+            $input = new \Symfony\Component\Console\Input\ArrayInput([]);
+            $output = new \Symfony\Component\Console\Output\BufferedOutput();
+
+            $command->run($input, $output);
+
+            $rendered = $output->fetch();
+            expect($rendered)->toContain('enabled');
+        });
+
+        it('displays disabled when auto-publish is off', function () {
+            [$command] = makeTestableCommand(['auto_publish' => false]);
+
+            $input = new \Symfony\Component\Console\Input\ArrayInput([]);
+            $output = new \Symfony\Component\Console\Output\BufferedOutput();
+
+            $command->run($input, $output);
+
+            $rendered = $output->fetch();
+            expect($rendered)->toContain('disabled');
+        });
+    });
+
+    describe('auto-connect', function () {
+
+        it('calls autoConnect on daemon when connections have auto_connect', function () {
+            $app = makeSessionCommandApp(['auto_publish' => true]);
+            $config = $app->make('config');
+            $config->set('opcua.connections', [
+                'plc1' => [
+                    'endpoint' => 'opc.tcp://plc1:4840',
+                    'auto_connect' => true,
+                    'subscriptions' => [
+                        [
+                            'publishing_interval' => 500.0,
+                            'monitored_items' => [
+                                ['node_id' => 'ns=2;s=Temperature', 'client_handle' => 1],
+                            ],
+                        ],
+                    ],
+                ],
+            ]);
+
+            $command = new class extends SessionCommand {
+                public array $capturedArgs = [];
+                public ?array $autoConnectCalled = null;
+
+                protected function createDaemon(
+                    string                    $socketPath,
+                    int                       $timeout,
+                    int                       $cleanupInterval,
+                    ?string                   $authToken,
+                    int                       $maxSessions,
+                    int                       $socketMode,
+                    ?array                    $allowedCertDirs,
+                    LoggerInterface           $logger,
+                    ?CacheInterface           $clientCache,
+                    ?EventDispatcherInterface $clientEventDispatcher = null,
+                    bool                      $autoPublish = false,
+                ): SessionManagerDaemon {
+                    $this->capturedArgs = compact('autoPublish');
+                    $mock = Mockery::mock(SessionManagerDaemon::class);
+                    $mock->shouldReceive('run')->once();
+                    $mock->shouldReceive('autoConnect')->once()->andReturnUsing(function ($connections) {
+                        $this->autoConnectCalled = $connections;
+                    });
+                    return $mock;
+                }
+            };
+            $command->setLaravel($app);
+            runCommand($command);
+
+            expect($command->autoConnectCalled)->toHaveKey('plc1');
+            expect($command->autoConnectCalled['plc1']['endpoint'])->toBe('opc.tcp://plc1:4840');
+            expect($command->autoConnectCalled['plc1']['subscriptions'])->toHaveCount(1);
+        });
+
+        it('skips connections without auto_connect', function () {
+            $app = makeSessionCommandApp(['auto_publish' => true]);
+            $config = $app->make('config');
+            $config->set('opcua.connections', [
+                'plc1' => [
+                    'endpoint' => 'opc.tcp://plc1:4840',
+                    'auto_connect' => true,
+                    'subscriptions' => [['monitored_items' => [['node_id' => 'i=1', 'client_handle' => 1]]]],
+                ],
+                'historian' => [
+                    'endpoint' => 'opc.tcp://historian:4840',
+                ],
+                'plc2' => [
+                    'endpoint' => 'opc.tcp://plc2:4840',
+                    'auto_connect' => false,
+                    'subscriptions' => [['monitored_items' => [['node_id' => 'i=2', 'client_handle' => 2]]]],
+                ],
+            ]);
+
+            $command = new class extends SessionCommand {
+                public ?array $autoConnectCalled = null;
+
+                protected function createDaemon(
+                    string                    $socketPath,
+                    int                       $timeout,
+                    int                       $cleanupInterval,
+                    ?string                   $authToken,
+                    int                       $maxSessions,
+                    int                       $socketMode,
+                    ?array                    $allowedCertDirs,
+                    LoggerInterface           $logger,
+                    ?CacheInterface           $clientCache,
+                    ?EventDispatcherInterface $clientEventDispatcher = null,
+                    bool                      $autoPublish = false,
+                ): SessionManagerDaemon {
+                    $mock = Mockery::mock(SessionManagerDaemon::class);
+                    $mock->shouldReceive('run')->once();
+                    $mock->shouldReceive('autoConnect')->once()->andReturnUsing(function ($connections) {
+                        $this->autoConnectCalled = $connections;
+                    });
+                    return $mock;
+                }
+            };
+            $command->setLaravel($app);
+            runCommand($command);
+
+            expect($command->autoConnectCalled)->toHaveCount(1);
+            expect($command->autoConnectCalled)->toHaveKey('plc1');
+            expect($command->autoConnectCalled)->not->toHaveKey('historian');
+            expect($command->autoConnectCalled)->not->toHaveKey('plc2');
+        });
+
+        it('does not call autoConnect when auto_publish is disabled', function () {
+            $app = makeSessionCommandApp(['auto_publish' => false]);
+            $config = $app->make('config');
+            $config->set('opcua.connections', [
+                'plc1' => [
+                    'endpoint' => 'opc.tcp://plc1:4840',
+                    'auto_connect' => true,
+                    'subscriptions' => [['monitored_items' => [['node_id' => 'i=1', 'client_handle' => 1]]]],
+                ],
+            ]);
+
+            $command = new class extends SessionCommand {
+                public bool $autoConnectWasCalled = false;
+
+                protected function createDaemon(
+                    string                    $socketPath,
+                    int                       $timeout,
+                    int                       $cleanupInterval,
+                    ?string                   $authToken,
+                    int                       $maxSessions,
+                    int                       $socketMode,
+                    ?array                    $allowedCertDirs,
+                    LoggerInterface           $logger,
+                    ?CacheInterface           $clientCache,
+                    ?EventDispatcherInterface $clientEventDispatcher = null,
+                    bool                      $autoPublish = false,
+                ): SessionManagerDaemon {
+                    $mock = Mockery::mock(SessionManagerDaemon::class);
+                    $mock->shouldReceive('run')->once();
+                    $mock->shouldReceive('autoConnect')->never();
+                    return $mock;
+                }
+            };
+            $command->setLaravel($app);
+            runCommand($command);
+        });
+    });
+
+    describe('mapToDaemonConfig', function () {
+
+        it('maps Laravel config keys to daemon format', function () {
+            $command = new SessionCommand();
+            $method = new ReflectionMethod(SessionCommand::class, 'mapToDaemonConfig');
+
+            $result = $method->invoke($command, [
+                'security_policy' => 'Basic256Sha256',
+                'security_mode' => 'SignAndEncrypt',
+                'username' => 'admin',
+                'password' => 'secret',
+                'timeout' => 3.0,
+                'auto_retry' => 5,
+                'batch_size' => 100,
+                'browse_max_depth' => 15,
+                'trust_store_path' => '/certs',
+                'trust_policy' => 'fingerprint',
+                'auto_accept' => true,
+                'auto_accept_force' => true,
+                'auto_detect_write_type' => true,
+                'read_metadata_cache' => false,
+            ]);
+
+            expect($result['securityPolicy'])->toBe(SecurityPolicy::Basic256Sha256->value);
+            expect($result['securityMode'])->toBe(SecurityMode::SignAndEncrypt->value);
+            expect($result['username'])->toBe('admin');
+            expect($result['password'])->toBe('secret');
+            expect($result['opcuaTimeout'])->toBe(3.0);
+            expect($result['autoRetry'])->toBe(5);
+            expect($result['batchSize'])->toBe(100);
+            expect($result['defaultBrowseMaxDepth'])->toBe(15);
+            expect($result['trustStorePath'])->toBe('/certs');
+            expect($result['trustPolicy'])->toBe('fingerprint');
+            expect($result['autoAccept'])->toBeTrue();
+            expect($result['autoAcceptForce'])->toBeTrue();
+            expect($result['autoDetectWriteType'])->toBeTrue();
+            expect($result['readMetadataCache'])->toBeFalse();
+        });
+
+        it('skips None security policy and mode', function () {
+            $command = new SessionCommand();
+            $method = new ReflectionMethod(SessionCommand::class, 'mapToDaemonConfig');
+
+            $result = $method->invoke($command, [
+                'security_policy' => 'None',
+                'security_mode' => 'None',
+            ]);
+
+            expect($result)->not->toHaveKey('securityPolicy');
+            expect($result)->not->toHaveKey('securityMode');
+        });
+
+        it('skips empty/null values', function () {
+            $command = new SessionCommand();
+            $method = new ReflectionMethod(SessionCommand::class, 'mapToDaemonConfig');
+
+            $result = $method->invoke($command, [
+                'username' => null,
+                'password' => null,
+                'client_certificate' => null,
+            ]);
+
+            expect($result)->not->toHaveKey('username');
+            expect($result)->not->toHaveKey('password');
+            expect($result)->not->toHaveKey('clientCertPath');
+        });
+
+        it('maps certificate paths', function () {
+            $command = new SessionCommand();
+            $method = new ReflectionMethod(SessionCommand::class, 'mapToDaemonConfig');
+
+            $result = $method->invoke($command, [
+                'client_certificate' => '/certs/client.pem',
+                'client_key' => '/certs/client.key',
+                'ca_certificate' => '/certs/ca.pem',
+                'user_certificate' => '/certs/user.pem',
+                'user_key' => '/certs/user.key',
+            ]);
+
+            expect($result['clientCertPath'])->toBe('/certs/client.pem');
+            expect($result['clientKeyPath'])->toBe('/certs/client.key');
+            expect($result['caCertPath'])->toBe('/certs/ca.pem');
+            expect($result['userCertPath'])->toBe('/certs/user.pem');
+            expect($result['userKeyPath'])->toBe('/certs/user.key');
+        });
+    });
+
+    describe('buildAutoConnectConfig', function () {
+
+        it('filters connections by auto_connect and subscriptions', function () {
+            $app = makeSessionCommandApp();
+            $config = $app->make('config');
+            $config->set('opcua.connections', [
+                'active' => [
+                    'endpoint' => 'opc.tcp://plc:4840',
+                    'auto_connect' => true,
+                    'subscriptions' => [['monitored_items' => [['node_id' => 'i=1', 'client_handle' => 1]]]],
+                ],
+                'no-auto' => [
+                    'endpoint' => 'opc.tcp://other:4840',
+                    'subscriptions' => [['monitored_items' => [['node_id' => 'i=2', 'client_handle' => 2]]]],
+                ],
+                'no-subs' => [
+                    'endpoint' => 'opc.tcp://bare:4840',
+                    'auto_connect' => true,
+                ],
+            ]);
+
+            $command = new SessionCommand();
+            $command->setLaravel($app);
+            $method = new ReflectionMethod(SessionCommand::class, 'buildAutoConnectConfig');
+
+            $result = $method->invoke($command);
+
+            expect($result)->toHaveCount(1);
+            expect($result)->toHaveKey('active');
+            expect($result['active']['endpoint'])->toBe('opc.tcp://plc:4840');
         });
     });
 });

@@ -43,6 +43,12 @@ return [
         // Daemon client cache — uses a Laravel cache store.
         // Falls back to Laravel's default cache store when not specified.
         'cache_store' => env('OPCUA_CACHE_STORE', env('CACHE_STORE', 'file')),
+
+        // Auto-publish: when enabled, the daemon automatically calls publish()
+        // for sessions with active subscriptions. Notifications are delivered
+        // via PSR-14 events (DataChangeReceived, EventNotificationReceived,
+        // AlarmActivated, etc.). Register listeners in your EventServiceProvider.
+        'auto_publish' => env('OPCUA_AUTO_PUBLISH', false),
     ],
 
     /*
@@ -95,6 +101,30 @@ return [
 
             // Read metadata cache (v4.0+ — caches non-Value attribute reads)
             'read_metadata_cache' => env('OPCUA_READ_METADATA_CACHE',false),
+
+            // Auto-connect (optional) — when true and auto_publish is enabled,
+            // the daemon connects to this endpoint on startup and registers
+            // the subscriptions defined below.
+            // 'auto_connect' => false,
+
+            // Subscriptions (optional) — auto-registered when auto_connect is true.
+            // Each subscription can have monitored_items and/or event_monitored_items.
+            // 'subscriptions' => [
+            //     [
+            //         'publishing_interval' => 500.0,
+            //         'max_keep_alive_count' => 5,
+            //         'monitored_items' => [
+            //             ['node_id' => 'ns=2;s=Temperature', 'client_handle' => 1],
+            //         ],
+            //         'event_monitored_items' => [
+            //             [
+            //                 'node_id' => 'i=2253',
+            //                 'client_handle' => 10,
+            //                 'select_fields' => ['EventId', 'EventType', 'SourceName', 'Time', 'Message', 'Severity'],
+            //             ],
+            //         ],
+            //     ],
+            // ],
         ],
 
     ],

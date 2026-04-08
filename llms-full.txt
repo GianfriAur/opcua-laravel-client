@@ -46,8 +46,13 @@ Three sections: default connection name, session_manager, connections.
 | allowed_cert_dirs | — | null | Certificate directory whitelist |
 | log_channel | OPCUA_LOG_CHANNEL | Laravel default | Daemon log channel |
 | cache_store | OPCUA_CACHE_STORE | Laravel default | Daemon cache store |
+| auto_publish | OPCUA_AUTO_PUBLISH | false | Auto-publish for sessions with subscriptions (dispatches PSR-14 events) |
 
 ### Connection Config
+
+New in v4.0.1 (per-connection):
+| auto_connect | false | Auto-connect on daemon startup (requires auto_publish) |
+| subscriptions | — | Array of subscription definitions with monitored_items and event_monitored_items |
 
 | Key | Default | Description |
 |-----|---------|-------------|
@@ -104,6 +109,49 @@ Static access to OpcuaManager with full PHPDoc for IDE autocompletion. Resolves 
 Options: --timeout, --cleanup-interval, --max-sessions, --socket-mode, --log-channel, --cache-store
 
 Resolves logger via app('log')->channel($channel) and cache via app('cache')->store($store). Creates SessionManagerDaemon and runs it.
+
+When `auto_publish` is enabled, resolves `EventDispatcherInterface` from the container and passes it to the daemon. Reads connections with `auto_connect: true` and calls `$daemon->autoConnect()` before `$daemon->run()`.
+
+## Auto-Publish & Auto-Connect (v4.0.1)
+
+When `auto_publish: true` in session_manager config, the daemon automatically calls `publish()` for sessions with active subscriptions. The client's PSR-14 events (`DataChangeReceived`, `EventNotificationReceived`, `AlarmActivated`, etc.) are dispatched through Laravel's event system.
+
+Per-connection `auto_connect: true` with `subscriptions` config makes the daemon connect and register monitoring on startup:
+
+```php
+// config/opcua.php
+'session_manager' => ['auto_publish' => true],
+'connections' => [
+    'plc-1' => [
+        'endpoint' => 'opc.tcp://192.168.1.10:4840',
+        'auto_connect' => true,
+        'subscriptions' => [
+            [
+                'publishing_interval' => 500.0,
+                'max_keep_alive_count' => 5,
+                'monitored_items' => [
+                    ['node_id' => 'ns=2;s=Temperature', 'client_handle' => 1],
+                ],
+                'event_monitored_items' => [
+                    ['node_id' => 'i=2253', 'client_handle' => 10],
+                ],
+            ],
+        ],
+    ],
+],
+```
+
+```php
+// EventServiceProvider
+Event::listen(DataChangeReceived::class, function (DataChangeReceived $e) {
+    DB::table('sensor_readings')->insert([
+        'client_handle' => $e->clientHandle,
+        'value' => $e->dataValue->getValue(),
+    ]);
+});
+```
+
+Runtime subscriptions via Facade are also auto-published. Manual `publish()` is blocked while auto-publish is active (returns `auto_publish_active` error).
 
 ## Reading Values
 

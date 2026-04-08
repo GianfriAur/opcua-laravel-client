@@ -28,6 +28,8 @@ Laravel integration for [OPC UA](https://opcfoundation.org/about/opc-technologie
 - **Laravel-native logging and caching** — your log channel and cache store are automatically injected into every OPC UA client
 - **All OPC UA operations** — browse, read, write, method calls, subscriptions, events, history, path resolution, type discovery
 - **PSR-14 events** — 47 dispatched events covering every OPC UA operation for observability and extensibility
+- **Auto-publish** — daemon monitors subscriptions automatically and dispatches PSR-14 events to your Laravel listeners — no manual publish loop
+- **Auto-connect** — define subscriptions in `config/opcua.php` per connection and the daemon sets them up at startup
 - **Trust store** — certificate trust management with configurable policies and auto-accept modes
 - **Write auto-detection** — omit the type parameter and let the client detect the correct OPC UA type automatically
 
@@ -155,6 +157,46 @@ $client->deleteSubscription($sub->subscriptionId);
 $client->disconnect();
 ```
 
+### Auto-publish — no manual publish loop
+
+With `auto_publish` enabled, the daemon handles subscriptions automatically. Just register Laravel event listeners:
+
+```php
+// config/opcua.php
+'session_manager' => ['auto_publish' => true],
+
+'connections' => [
+    'plc-1' => [
+        'endpoint' => 'opc.tcp://192.168.1.10:4840',
+        'auto_connect' => true,
+        'subscriptions' => [
+            [
+                'publishing_interval' => 500.0,
+                'monitored_items' => [
+                    ['node_id' => 'ns=2;s=Temperature', 'client_handle' => 1],
+                ],
+            ],
+        ],
+    ],
+],
+```
+
+```php
+// EventServiceProvider
+use PhpOpcua\Client\Event\DataChangeReceived;
+
+Event::listen(DataChangeReceived::class, function (DataChangeReceived $e) {
+    DB::table('sensor_readings')->insert([
+        'value' => $e->dataValue->getValue(),
+        'client_handle' => $e->clientHandle,
+    ]);
+});
+```
+
+```bash
+php artisan opcua:session  # connects, subscribes, publishes — all automatic
+```
+
 ### Switch connections
 
 ```php
@@ -205,6 +247,8 @@ echo $mock->callCount('read'); // 1
 | **Read Metadata Cache** | Cached node metadata avoids redundant reads; refresh on demand with `read($nodeId, refresh: true)` |
 | **Trust Store** | `FileTrustStore` with configurable `TrustPolicy`, auto-accept modes, and certificate management |
 | **Type Discovery** | `discoverDataTypes()` auto-detects custom server structures |
+| **Auto-Publish** | Daemon auto-publishes for sessions with subscriptions, dispatches PSR-14 events to Laravel listeners |
+| **Auto-Connect** | Per-connection `auto_connect` with declarative `subscriptions` config — daemon sets up monitoring on startup |
 | **Subscription Management** | `createMonitoredItems()`, `modifyMonitoredItems()`, `setTriggering()`, `transferSubscriptions()` |
 | **MockClient** | Test without a server — register handlers, assert calls |
 | **Timeout & Retry** | Per-connection `timeout`, `auto_retry` via config or fluent API |
@@ -228,6 +272,7 @@ echo $mock->callCount('read'); // 1
 | 07 | [Security](doc/07-security.md) | Policies, modes, certificates, authentication |
 | 08 | [Testing](doc/08-testing.md) | MockClient, DataValue factories, unit and integration tests |
 | 09 | [Examples](doc/09-examples.md) | Complete code examples for all features |
+| 10 | [Auto-Publish & Monitoring](doc/10-auto-publish.md) | Auto-publish, auto-connect, event listeners, real-world use case |
 
 ## Testing
 
