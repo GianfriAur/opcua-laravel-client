@@ -32,7 +32,7 @@
 - Timeout, auto-retry, automatic batching via config or fluent API
 - Recursive browsing with depth control and cycle detection
 - Path resolution — resolveNodeId('/Objects/Server/ServerStatus')
-- 6 security policies, 3 auth modes, auto-generated certificates, certificate trust management
+- 10 security policies (RSA + ECC), 3 auth modes, auto-generated certificates, certificate trust management
 - Historical data — raw, processed, and at-time queries
 - All service responses return typed DTOs (SubscriptionResult, CallResult, BrowseResultSet, MonitoredItemModifyResult, SetTriggeringResult, ExtensionObject, etc.)
 

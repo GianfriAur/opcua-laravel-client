@@ -640,11 +640,22 @@ try {
 }
 ```
 
+### ECC security (no certificate needed)
+```dotenv
+OPCUA_SECURITY_POLICY=ECC_nistP256
+OPCUA_SECURITY_MODE=SignAndEncrypt
+OPCUA_USERNAME=operator
+OPCUA_PASSWORD=secret
+```
+
+ECC certificates are auto-generated when `client_certificate`/`client_key` are omitted. Username/password uses `EccEncryptedSecret` automatically.
+
 ### Important rules
-- Security policies: `None`, `Basic128Rsa15`, `Basic256`, `Basic256Sha256`, `Aes128Sha256RsaOaep`, `Aes256Sha256RsaPss`
+- Security policies: `None`, `Basic128Rsa15`, `Basic256`, `Basic256Sha256`, `Aes128Sha256RsaOaep`, `Aes256Sha256RsaPss`, `ECC_nistP256`, `ECC_nistP384`, `ECC_brainpoolP256r1`, `ECC_brainpoolP384r1`
 - Security modes: `None`, `Sign`, `SignAndEncrypt`
 - Auth methods: anonymous (default), username/password, X.509 certificate
-- If `client_certificate`/`client_key` are omitted, a self-signed cert is auto-generated (dev only)
+- If `client_certificate`/`client_key` are omitted, a self-signed cert is auto-generated (RSA for RSA policies, ECC for ECC policies)
+- **ECC disclaimer:** No commercial OPC UA vendor supports ECC endpoints yet — tested against OPC Foundation's UA-.NETStandard only
 - Trust policies: `fingerprint`, `fingerprint+expiry`, `full`
 - Store secrets in `.env`, never commit them
 

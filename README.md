@@ -56,6 +56,7 @@ composer require php-opcua/laravel-opcua
 ```
 
 ```dotenv
+# RSA security (or use ECC: ECC_nistP256, ECC_nistP384, ECC_brainpoolP256r1, ECC_brainpoolP384r1)
 OPCUA_ENDPOINT=opc.tcp://192.168.1.100:4840
 ```
 
@@ -255,7 +256,9 @@ echo $mock->callCount('read'); // 1
 | **Auto-Batching** | `readMulti`/`writeMulti` transparently split when exceeding server limits |
 | **Recursive Browse** | `browseAll()`, `browseRecursive()` with depth control and cycle detection |
 | **Path Resolution** | `resolveNodeId('/Objects/Server/ServerStatus')` |
-| **Security** | 6 policies, 3 auth modes, auto-generated certs, certificate trust management |
+| **Security** | 10 policies (RSA + ECC), 3 auth modes, auto-generated certs, certificate trust management |
+
+> **ECC disclaimer:** ECC security policies (`ECC_nistP256`, `ECC_nistP384`, `ECC_brainpoolP256r1`, `ECC_brainpoolP384r1`) are fully implemented and tested against the OPC Foundation's UA-.NETStandard reference stack. However, no commercial OPC UA vendor supports ECC endpoints yet. When using ECC, client certificates are auto-generated if `client_certificate`/`client_key` are omitted, and username/password authentication uses the `EccEncryptedSecret` protocol automatically.
 | **History Read** | Raw, processed, and at-time historical queries |
 | **Typed Returns** | All service responses return `public readonly` DTOs |
 
@@ -276,7 +279,7 @@ echo $mock->callCount('read'); // 1
 
 ## Testing
 
-80+ unit tests with **99%+ code coverage**. Integration tests run against [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) — a Docker-based OPC UA environment built on the OPC Foundation's UA-.NETStandard reference implementation — in both direct and managed (daemon) modes.
+146+ unit tests with **99%+ code coverage**. Integration tests run against [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) — a Docker-based OPC UA environment built on the OPC Foundation's UA-.NETStandard reference implementation — in both direct and managed (daemon) modes.
 
 ```bash
 ./vendor/bin/pest tests/Unit/                              # unit only

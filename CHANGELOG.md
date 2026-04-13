@@ -1,5 +1,20 @@
 # Changelog
 
+## [4.1.0] - 2026-04-13
+
+### Added
+
+- **ECC security policy support.** `security_policy` config key now accepts `ECC_nistP256`, `ECC_nistP384`, `ECC_brainpoolP256r1`, and `ECC_brainpoolP384r1` in addition to the existing 6 RSA policies. Added to `resolveSecurityPolicyUri()` in both `OpcuaManager` and `SessionCommand`. No `client_certificate`/`client_key` needed — ECC certificates are auto-generated when omitted. Username/password authentication uses the `EccEncryptedSecret` protocol automatically.
+  - **ECC disclaimer:** No commercial OPC UA vendor supports ECC endpoints yet. This implementation is tested exclusively against the OPC Foundation's UA-.NETStandard reference stack.
+
+### Changed
+
+- Bumped minimum `php-opcua/opcua-client` dependency from `^4.0.0` to `^4.1` and `php-opcua/opcua-session-manager` from `^4.0.3` to `^4.1`.
+- Security support expanded from 6 to **10 policies** (6 RSA + 4 ECC).
+- Updated CI test server suite from `php-opcua/uanetstandard-test-suite@v1.0.0` to `@v1.1.0`.
+- Updated `config/opcua.php` security policy comment to list all 10 available policies including ECC.
+- Updated documentation (README, doc/07-security.md, doc/09-examples.md, llms.txt, llms-full.txt, llms-skills.md) to reflect ECC support, add ECC `.env` examples, and include the ECC disclaimer.
+
 ## [4.0.1] - 2026-04-09
 
 ### Added

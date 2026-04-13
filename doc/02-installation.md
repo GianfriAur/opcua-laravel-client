@@ -102,7 +102,7 @@ Each connection can have its own endpoint, security settings, and credentials:
 | Key | Default | Description |
 |-----|---------|-------------|
 | `endpoint` | `opc.tcp://localhost:4840` | OPC UA server URL |
-| `security_policy` | `None` | Security policy name or URI |
+| `security_policy` | `None` | Security policy name or URI (see [Security](07-security.md) for all 10 policies including ECC) |
 | `security_mode` | `None` | `None`, `Sign`, or `SignAndEncrypt` |
 | `username` / `password` | `null` | Username/password authentication |
 | `client_certificate` / `client_key` | `null` | Client certificate (auto-generated if omitted) |

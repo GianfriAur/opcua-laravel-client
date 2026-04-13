@@ -57,7 +57,7 @@ New in v4.0.1 (per-connection):
 | Key | Default | Description |
 |-----|---------|-------------|
 | endpoint | opc.tcp://localhost:4840 | Server URL |
-| security_policy | None | None, Basic128Rsa15, Basic256, Basic256Sha256, Aes128Sha256RsaOaep, Aes256Sha256RsaPss |
+| security_policy | None | None, Basic128Rsa15, Basic256, Basic256Sha256, Aes128Sha256RsaOaep, Aes256Sha256RsaPss, ECC_nistP256, ECC_nistP384, ECC_brainpoolP256r1, ECC_brainpoolP384r1 |
 | security_mode | None | None, Sign, SignAndEncrypt |
 | username / password | null | User authentication |
 | client_certificate / client_key | null | Client cert (auto-generated if omitted) |
@@ -326,10 +326,10 @@ $repo = $client->getExtensionObjectRepository();
 
 ## Security
 
-6 policies: None, Basic128Rsa15, Basic256, Basic256Sha256, Aes128Sha256RsaOaep, Aes256Sha256RsaPss.
+10 policies: None, Basic128Rsa15, Basic256, Basic256Sha256, Aes128Sha256RsaOaep, Aes256Sha256RsaPss, ECC_nistP256, ECC_nistP384, ECC_brainpoolP256r1, ECC_brainpoolP384r1.
 3 modes: None, Sign, SignAndEncrypt.
 3 auth methods: Anonymous, Username/Password, X.509 Certificate.
-Auto-generated client certificates when policy/mode set but no cert provided.
+Auto-generated client certificates when policy/mode set but no cert provided (RSA 2048 for RSA policies, EC matching curve for ECC policies).
 Certificate trust management via FileTrustStore with configurable TrustPolicy.
 
 ## MockClient (Testing)

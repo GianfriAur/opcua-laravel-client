@@ -361,6 +361,10 @@ class OpcuaManager
             'Basic256Sha256' => SecurityPolicy::Basic256Sha256->value,
             'Aes128Sha256RsaOaep' => SecurityPolicy::Aes128Sha256RsaOaep->value,
             'Aes256Sha256RsaPss' => SecurityPolicy::Aes256Sha256RsaPss->value,
+            'ECC_nistP256' => SecurityPolicy::EccNistP256->value,
+            'ECC_nistP384' => SecurityPolicy::EccNistP384->value,
+            'ECC_brainpoolP256r1' => SecurityPolicy::EccBrainpoolP256r1->value,
+            'ECC_brainpoolP384r1' => SecurityPolicy::EccBrainpoolP384r1->value,
         ];
 
         return $map[$policy] ?? $policy;

@@ -67,7 +67,7 @@ return [
             'endpoint' => env('OPCUA_ENDPOINT', 'opc.tcp://localhost:4840'),
 
             // Security (optional)
-            'security_policy' => env('OPCUA_SECURITY_POLICY','None'), // None, Basic128Rsa15, Basic256, Basic256Sha256, Aes128Sha256RsaOaep, Aes256Sha256RsaPss
+            'security_policy' => env('OPCUA_SECURITY_POLICY','None'), // None, Basic128Rsa15, Basic256, Basic256Sha256, Aes128Sha256RsaOaep, Aes256Sha256RsaPss, ECC_nistP256, ECC_nistP384, ECC_brainpoolP256r1, ECC_brainpoolP384r1
             'security_mode' => env('OPCUA_SECURITY_MODE','None'),     // None, Sign, SignAndEncrypt
 
             // User authentication (optional)

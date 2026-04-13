@@ -2,7 +2,7 @@
 
 > **A note on versioning:** We're aware of the rapid major releases in a short time frame. This library is under active, full-time development right now — the goal is to reach a production-stable state as quickly as possible. Breaking changes are being bundled and shipped deliberately to avoid dragging them out across many minor releases. Once the API surface settles, major version bumps will become rare. Thanks for your patience.
 
-## v4.0.0
+## Planned
 
 ### Features
 
@@ -20,6 +20,13 @@
 - [ ] Connection pooling — warm up named connections on provider boot (opt-in) to eliminate the first-request latency hit
 - [ ] Middleware — `EnsureOpcuaConnected` middleware that guarantees a live connection for the duration of the request and disconnects in `terminate()`
 - [ ] Lazy proxy — return a lazy proxy from `connection()` that defers the actual TCP/IPC handshake until the first operation, reducing boot overhead when the connection may not be needed
+
+## Completed in v4.1.0
+
+- [x] **ECC security policy support** — `security_policy` config key accepts `ECC_nistP256`, `ECC_nistP384`, `ECC_brainpoolP256r1`, `ECC_brainpoolP384r1`
+- [x] ECC mapping in both `OpcuaManager::resolveSecurityPolicyUri()` and `SessionCommand::resolveSecurityPolicyUri()`
+- [x] Security support expanded from 6 to **10 policies** (6 RSA + 4 ECC)
+- [x] Updated all documentation and AI-ready files
 
 ## Won't Do (by design)
 

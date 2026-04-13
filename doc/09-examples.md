@@ -301,6 +301,27 @@ echo $value->getValue();
 $client->disconnect();
 ```
 
+## ECC Secure Connection
+
+```php
+use PhpOpcua\LaravelOpcua\Facades\Opcua;
+
+// ECC security — no client certificate needed (auto-generated)
+$client = Opcua::connectTo('opc.tcp://10.0.0.10:4840', [
+    'security_policy' => 'ECC_nistP256',
+    'security_mode'   => 'SignAndEncrypt',
+    'username'        => 'operator',
+    'password'        => 'secret',
+]);
+
+$value = $client->read('ns=2;i=1001');
+echo $value->getValue();
+
+$client->disconnect();
+```
+
+> **ECC disclaimer:** ECC security policies (`ECC_nistP256`, `ECC_nistP384`, `ECC_brainpoolP256r1`, `ECC_brainpoolP384r1`) are fully implemented and tested against the OPC Foundation's UA-.NETStandard reference stack. No commercial OPC UA vendor supports ECC endpoints yet.
+
 ## Multiple Connections
 
 ```php

@@ -12,8 +12,12 @@ Each policy defines the algorithms used for encryption and signing:
 | Basic256Sha256 | RSA-SHA256 | RSA-OAEP | HMAC-SHA256 | AES-256-CBC | 2048 bit |
 | Aes128Sha256RsaOaep | RSA-SHA256 | RSA-OAEP | HMAC-SHA256 | AES-128-CBC | 2048 bit |
 | Aes256Sha256RsaPss | RSA-PSS-SHA256 | RSA-OAEP-SHA256 | HMAC-SHA256 | AES-256-CBC | 2048 bit |
+| ECC_nistP256 | ECDSA-SHA256 | ECDH (P-256) | HMAC-SHA256 | AES-128-CBC | P-256 |
+| ECC_nistP384 | ECDSA-SHA384 | ECDH (P-384) | HMAC-SHA384 | AES-256-CBC | P-384 |
+| ECC_brainpoolP256r1 | ECDSA-SHA256 | ECDH (BP-256) | HMAC-SHA256 | AES-128-CBC | BP-256 |
+| ECC_brainpoolP384r1 | ECDSA-SHA384 | ECDH (BP-384) | HMAC-SHA384 | AES-256-CBC | BP-384 |
 
-> **Tip:** For new deployments, use `Basic256Sha256` or `Aes256Sha256RsaPss`. The older policies (`Basic128Rsa15`, `Basic256`) exist for legacy server compatibility.
+> **Tip:** For new deployments, use `Basic256Sha256`, `Aes256Sha256RsaPss`, or one of the ECC policies. ECC policies use Elliptic Curve Diffie-Hellman for key agreement and HKDF for key derivation instead of RSA encryption — they offer equivalent security with smaller keys and faster handshakes. The older policies (`Basic128Rsa15`, `Basic256`) exist for legacy server compatibility.
 
 ## Security Modes
 
@@ -109,7 +113,7 @@ openssl x509 -req -in client.csr -CA ca.pem -CAkey ca.key \
 
 ### Auto-Generated Certificates
 
-When a security policy and mode are configured but no `client_certificate` / `client_key` are provided, the underlying client automatically generates a self-signed RSA 2048 certificate in memory with proper OPC UA extensions.
+When a security policy and mode are configured but no `client_certificate` / `client_key` are provided, the underlying client automatically generates a self-signed certificate in memory with proper OPC UA extensions. For RSA policies, a 2048-bit RSA certificate is generated. For ECC policies, an EC certificate matching the policy's curve (NIST P-256/P-384 or Brainpool P-256/P-384) is generated.
 
 ```php
 'connections' => [
@@ -164,7 +168,7 @@ The `security_policy` config key accepts both short names and full OPC UA URIs:
 'security_policy' => 'http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256',
 ```
 
-Supported short names: `None`, `Basic128Rsa15`, `Basic256`, `Basic256Sha256`, `Aes128Sha256RsaOaep`, `Aes256Sha256RsaPss`.
+Supported short names: `None`, `Basic128Rsa15`, `Basic256`, `Basic256Sha256`, `Aes128Sha256RsaOaep`, `Aes256Sha256RsaPss`, `ECC_nistP256`, `ECC_nistP384`, `ECC_brainpoolP256r1`, `ECC_brainpoolP384r1`.
 
 ## Mode Resolution
 
@@ -206,7 +210,7 @@ Client                          Server
 
 **Phase 1 — Discovery.** The client connects without security, calls `GetEndpoints`, and retrieves the server's certificate.
 
-**Phase 2 — Asymmetric (OpenSecureChannel).** The client sends an OPN request encrypted with the server's public key. Both sides exchange nonces. Symmetric keys are derived from the shared nonces.
+**Phase 2 — Asymmetric (OpenSecureChannel).** For RSA policies, the client sends an OPN request encrypted with the server's public key; both sides exchange nonces and derive symmetric keys via P_SHA. For ECC policies, the OPN is signed (not encrypted) with ECDSA; both sides exchange ephemeral EC public keys and derive symmetric keys via ECDH + HKDF.
 
 **Phase 3 — Symmetric (Session + Messages).** All subsequent messages (CreateSession, ActivateSession, Read, Write, etc.) use the derived symmetric keys — signed with HMAC and encrypted with AES-CBC.
 
