@@ -1,5 +1,15 @@
 # Changelog
 
+## [4.1.1] - 2026-04-13
+
+### Fixed
+
+- **Cache serialization compatibility with Laravel 13.** Bumped `php-opcua/opcua-client` to `^4.1.1` which fixes `cachedFetch()` storing raw PHP objects in the PSR-16 cache. Laravel 13 defaults to `serializable_classes => false` in `config/cache.php`, causing all cached OPC UA types (`ReferenceDescription`, `NodeId`, `DataValue`, etc.) to be restored as `__PHP_Incomplete_Class` on cache hit. The fix wraps cached values as safe strings so the cache backend is immune to `allowed_classes` restrictions. ([#1](https://github.com/php-opcua/laravel-opcua/issues/1), [php-opcua/opcua-client#1](https://github.com/php-opcua/opcua-client/issues/1))
+
+### Added
+
+- Integration test `CacheSerializationTest` verifying browse results survive a file cache roundtrip across connections and that cached values are plain strings immune to `allowed_classes` restrictions.
+
 ## [4.1.0] - 2026-04-13
 
 ### Added
