@@ -198,6 +198,37 @@ Event::listen(DataChangeReceived::class, function (DataChangeReceived $e) {
 php artisan opcua:session  # connects, subscribes, publishes — all automatic
 ```
 
+### React to events
+
+47 PSR-14 events are dispatched automatically — connections, reads, writes, alarms, subscriptions, cache, retries. Just register listeners:
+
+```php
+use Illuminate\Support\Facades\Event;
+use PhpOpcua\Client\Event\ClientConnected;
+use PhpOpcua\Client\Event\NodeValueWriteFailed;
+use PhpOpcua\Client\Event\AlarmActivated;
+
+// Log connections
+Event::listen(ClientConnected::class, function ($e) {
+    logger()->info("Connected to {$e->endpointUrl}");
+});
+
+// Track write failures
+Event::listen(NodeValueWriteFailed::class, function ($e) {
+    logger()->warning("Write failed on {$e->nodeId}: 0x" . dechex($e->statusCode));
+});
+
+// Alert operators on alarms
+Event::listen(AlarmActivated::class, function ($e) {
+    Notification::send(
+        User::role('operator')->get(),
+        new AlarmTriggered($e->sourceName, $e->severity, $e->message),
+    );
+});
+```
+
+See [Events documentation](doc/11-events.md) for the full reference of all 47 events.
+
 ### Switch connections
 
 ```php
@@ -276,6 +307,7 @@ echo $mock->callCount('read'); // 1
 | 08 | [Testing](doc/08-testing.md) | MockClient, DataValue factories, unit and integration tests |
 | 09 | [Examples](doc/09-examples.md) | Complete code examples for all features |
 | 10 | [Auto-Publish & Monitoring](doc/10-auto-publish.md) | Auto-publish, auto-connect, event listeners, real-world use case |
+| 11 | [Events](doc/11-events.md) | All 47 PSR-14 events, Laravel listeners, queued handlers, practical examples |
 
 ## Testing
 

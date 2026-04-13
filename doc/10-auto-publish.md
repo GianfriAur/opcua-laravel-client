@@ -8,34 +8,34 @@ Auto-publish eliminates the need for manual `publish()` loops when using OPC UA 
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                         Laravel Application                             │
+│                         Laravel Application                              │
 │                                                                          │
-│  EventServiceProvider                                                   │
-│    Event::listen(DataChangeReceived::class, ...)                        │
-│    Event::listen(AlarmActivated::class, ...)                            │
+│  EventServiceProvider                                                    │
+│    Event::listen(DataChangeReceived::class, ...)                         │
+│    Event::listen(AlarmActivated::class, ...)                             │
 │                                                                          │
-│  config/opcua.php                                                       │
-│    auto_publish: true                                                   │
+│  config/opcua.php                                                        │
+│    auto_publish: true                                                    │
 │    connections:                                                          │
-│      plc-1: { auto_connect: true, subscriptions: [...] }                │
-│      historian: { }  ← on-demand only                                   │
+│      plc-1: { auto_connect: true, subscriptions: [...] }                 │
+│      historian: { }  ← on-demand only                                    │
 │                                                                          │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  php artisan opcua:session                                              │
+│  php artisan opcua:session                                               │
 │                                                                          │
-│  Daemon (ReactPHP event loop)                                           │
-│    ├── Auto-connect: plc-1 → TCP → OPC UA Server                       │
-│    ├── Create subscriptions + monitored items                           │
-│    ├── AutoPublisher:                                                   │
-│    │     ├── Timer → publish() → events dispatched                      │
-│    │     ├── Acknowledgements tracked                                   │
-│    │     └── Recovery on connection errors                              │
-│    └── IPC socket for runtime requests                                  │
+│  Daemon (ReactPHP event loop)                                            │
+│    ├── Auto-connect: plc-1 → TCP → OPC UA Server                         │
+│    ├── Create subscriptions + monitored items                            │
+│    ├── AutoPublisher:                                                    │
+│    │     ├── Timer → publish() → events dispatched                       │
+│    │     ├── Acknowledgements tracked                                    │
+│    │     └── Recovery on connection errors                               │
+│    └── IPC socket for runtime requests                                   │
 │                                                                          │
-│  Events dispatched:                                                     │
-│    DataChangeReceived → Laravel listener → DB / notification / etc.    │
-│    AlarmActivated → Laravel listener → alert operators                  │
-│    SubscriptionKeepAlive → (optional logging)                           │
+│  Events dispatched:                                                      │
+│    DataChangeReceived → Laravel listener → DB / notification / etc.      │
+│    AlarmActivated → Laravel listener → alert operators                   │
+│    SubscriptionKeepAlive → (optional logging)                            │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -555,7 +555,7 @@ Starting OPC UA Session Manager...
 +---------------------+----------------------------------------------+
 | Setting             | Value                                        |
 +---------------------+----------------------------------------------+
-| Socket              | storage/app/opcua-session-manager.sock        |
+| Socket              | storage/app/opcua-session-manager.sock       |
 | Timeout             | 600s                                         |
 | Auth Token          | configured                                   |
 | Auto-publish        | enabled                                      |
