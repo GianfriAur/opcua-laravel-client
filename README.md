@@ -14,6 +14,8 @@
   <a href="https://packagist.org/packages/php-opcua/laravel-opcua"><img src="https://img.shields.io/packagist/v/php-opcua/laravel-opcua?style=flat-square&label=packagist" alt="Latest Version"></a>
   <a href="https://packagist.org/packages/php-opcua/laravel-opcua"><img src="https://img.shields.io/packagist/php-v/php-opcua/laravel-opcua?style=flat-square" alt="PHP Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/php-opcua/laravel-opcua?style=flat-square" alt="License"></a>
+  <a href="https://github.com/php-opcua/laravel-opcua/stargazers"><img src="https://img.shields.io/github/stars/php-opcua/laravel-opcua?style=flat-square" alt="Stars"></a>
+  <img src="https://img.shields.io/badge/Laravel-11.x%20%7C%2012.x%20%7C%2013.x-FF2D20?style=flat-square&logo=laravel&logoColor=white" alt="Laravel Version">
 </p>
 
 ---
