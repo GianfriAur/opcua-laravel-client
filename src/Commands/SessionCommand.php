@@ -7,6 +7,7 @@ namespace PhpOpcua\LaravelOpcua\Commands;
 use PhpOpcua\Client\Security\SecurityMode;
 use PhpOpcua\Client\Security\SecurityPolicy;
 use PhpOpcua\SessionManager\Daemon\SessionManagerDaemon;
+use PhpOpcua\SessionManager\Ipc\TransportFactory;
 use Illuminate\Console\Command;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -51,30 +52,34 @@ class SessionCommand extends Command
         $autoPublish = (bool) ($config['auto_publish'] ?? false);
         $eventDispatcher = $autoPublish ? $this->resolveEventDispatcher() : null;
 
-        $socketDir = dirname($socketPath);
-        if (!is_dir($socketDir)) {
-            mkdir($socketDir, 0755, true);
+        $unixPath = TransportFactory::toUnixPath($socketPath);
+        if ($unixPath !== null) {
+            $socketDir = dirname($unixPath);
+            if (!is_dir($socketDir)) {
+                mkdir($socketDir, 0755, true);
+            }
         }
 
         $logChannelName = $this->option('log-channel') ?? $config['log_channel'] ?? 'default';
         $cacheStoreName = $this->option('cache-store') ?? $config['cache_store'] ?? 'default';
 
         $this->info('Starting OPC UA Session Manager...');
-        $this->table(
-            ['Setting', 'Value'],
-            [
-                ['Socket', $socketPath],
-                ['Timeout', $timeout . 's'],
-                ['Cleanup Interval', $cleanupInterval . 's'],
-                ['Max Sessions', $maxSessions],
-                ['Socket Mode', sprintf('0%o', $socketMode)],
-                ['Auth Token', $authToken ? 'configured' : 'none'],
-                ['Cert Dirs', $allowedCertDirs ? implode(', ', $allowedCertDirs) : 'any'],
-                ['Log Channel', $logChannelName],
-                ['Cache Store', $cacheStoreName],
-                ['Auto-publish', $autoPublish ? 'enabled' : 'disabled'],
-            ],
-        );
+
+        $settings = [
+            ['Endpoint', $socketPath],
+            ['Timeout', $timeout . 's'],
+            ['Cleanup Interval', $cleanupInterval . 's'],
+            ['Max Sessions', $maxSessions],
+        ];
+        if ($unixPath !== null) {
+            $settings[] = ['Socket Mode', sprintf('0%o', $socketMode)];
+        }
+        $settings[] = ['Auth Token', $authToken ? 'configured' : 'none'];
+        $settings[] = ['Cert Dirs', $allowedCertDirs ? implode(', ', $allowedCertDirs) : 'any'];
+        $settings[] = ['Log Channel', $logChannelName];
+        $settings[] = ['Cache Store', $cacheStoreName];
+        $settings[] = ['Auto-publish', $autoPublish ? 'enabled' : 'disabled'];
+        $this->table(['Setting', 'Value'], $settings);
 
         $daemon = $this->createDaemon(
             socketPath: $socketPath,

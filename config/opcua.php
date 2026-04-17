@@ -28,7 +28,19 @@ return [
 
     'session_manager' => [
         'enabled' => env('OPCUA_SESSION_MANAGER_ENABLED', true),
-        'socket_path' => env('OPCUA_SOCKET_PATH', storage_path('app/opcua-session-manager.sock')),
+
+        // IPC endpoint URI. Accepts:
+        //   - unix://<absolute/path.sock>
+        //   - tcp://127.0.0.1:<port>   (loopback-only — any non-loopback host is refused)
+        //   - scheme-less path         (interpreted as unix://<path>)
+        //
+        // Defaults to PhpOpcua\SessionManager\Ipc\TransportFactory::defaultEndpoint():
+        //   - Linux/macOS: unix://<storage_path('app/opcua-session-manager.sock')>
+        //   - Windows:     tcp://127.0.0.1:9990
+        'socket_path' => env('OPCUA_SOCKET_PATH')
+            ?? (PHP_OS_FAMILY === 'Windows'
+                ? 'tcp://127.0.0.1:9990'
+                : storage_path('app/opcua-session-manager.sock')),
         'timeout' => env('OPCUA_SESSION_TIMEOUT', 600),
         'cleanup_interval' => env('OPCUA_CLEANUP_INTERVAL', 30),
         'auth_token' => env('OPCUA_AUTH_TOKEN'),

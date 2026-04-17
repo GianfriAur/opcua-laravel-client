@@ -13,12 +13,13 @@
 
 ## Architecture
 
-OpcuaManager checks for the session manager daemon's Unix socket at connection time. If present, ManagedClient (daemon-proxied) is created. Otherwise, a direct Client via ClientBuilder::create()->...->connect() is used. The switch is transparent.
+OpcuaManager checks for the session manager daemon's IPC endpoint at connection time. If present, ManagedClient (daemon-proxied) is created. Otherwise, a direct Client via ClientBuilder::create()->...->connect() is used. The switch is transparent. The IPC endpoint is auto-selected per platform: Unix-domain socket on Linux/macOS, TCP loopback on Windows.
 
 ```
 HTTP Request → Opcua::connect()
-  ├── socket exists? → ManagedClient (IPC to daemon → TCP to OPC UA server)
-  └── socket missing? → ClientBuilder::create()->...->connect() (direct TCP to OPC UA server)
+  ├── session manager reachable? → ManagedClient (IPC to daemon → TCP to OPC UA server)
+  │   └── TransportFactory::create($endpoint) picks UnixSocketTransport or TcpLoopbackTransport
+  └── session manager missing? → ClientBuilder::create()->...->connect() (direct TCP to OPC UA server)
 ```
 
 ## Installation
@@ -37,7 +38,7 @@ Three sections: default connection name, session_manager, connections.
 | Key | Env | Default | Description |
 |-----|-----|---------|-------------|
 | enabled | OPCUA_SESSION_MANAGER_ENABLED | true | Enable daemon auto-detection |
-| socket_path | OPCUA_SOCKET_PATH | storage/app/opcua-session-manager.sock | Unix socket path |
+| socket_path | OPCUA_SOCKET_PATH | per-OS (unix://<storage_path('app/opcua-session-manager.sock')> on Linux/macOS, tcp://127.0.0.1:9990 on Windows) | IPC endpoint URI: unix://<path>, tcp://127.0.0.1:<port> (loopback-only), or scheme-less path (= unix://<path>, BC with pre-v4.2.0 configs) |
 | timeout | OPCUA_SESSION_TIMEOUT | 600 | Session inactivity timeout (seconds) |
 | cleanup_interval | OPCUA_CLEANUP_INTERVAL | 30 | Cleanup check interval |
 | auth_token | OPCUA_AUTH_TOKEN | null | Shared secret for IPC |

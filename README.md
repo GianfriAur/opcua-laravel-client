@@ -18,6 +18,12 @@
   <img src="https://img.shields.io/badge/Laravel-11.x%20%7C%2012.x%20%7C%2013.x-FF2D20?style=flat-square&logo=laravel&logoColor=white" alt="Laravel Version">
 </p>
 
+<p align="center">
+  <img src="https://custom-icon-badges.demolab.com/badge/Linux-✓-2ea44f?style=flat-square&logo=linux&logoColor=white" alt="Linux">
+  <img src="https://custom-icon-badges.demolab.com/badge/macOS-✓-2ea44f?style=flat-square&logo=apple&logoColor=white" alt="macOS">
+  <img src="https://custom-icon-badges.demolab.com/badge/Windows-✓-2ea44f?style=flat-square&logo=windows11&logoColor=white" alt="Windows">
+</p>
+
 ---
 
 Laravel integration for [OPC UA](https://opcfoundation.org/about/opc-technologies/opc-ua/) built on [`opcua-client`](https://github.com/php-opcua/opcua-client) and [`opcua-session-manager`](https://github.com/php-opcua/opcua-session-manager). Connect your Laravel app to PLCs, SCADA systems, sensors, and IoT devices with a familiar developer experience: a `Facade`, `.env`-based configuration, named connections (like `config/database.php`), and an Artisan command for the optional session manager daemon.
@@ -45,7 +51,26 @@ Laravel integration for [OPC UA](https://opcfoundation.org/about/opc-technologie
 
 The underlying [opcua-client](https://github.com/php-opcua/opcua-client) is integration-tested against **[UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard)** — the **reference implementation** maintained by the OPC Foundation, the organization that defines the OPC UA specification. This is the same stack used by major industrial vendors to certify their products.
 
-This Laravel package is additionally integration-tested via [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) in both direct and managed (daemon) modes, ensuring full compatibility across all connection strategies.
+This Laravel package is additionally integration-tested via [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) in both direct and managed (daemon) modes, ensuring full compatibility across all connection strategies. Like [opcua-client](https://github.com/php-opcua/opcua-client) and [opcua-session-manager](https://github.com/php-opcua/opcua-session-manager), unit tests run cross-OS — **Linux, macOS, and Windows** across PHP 8.2–8.5 × Laravel 11/12/13 — on every push. Integration tests stay on Linux (Docker-hosted OPC UA servers).
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td>
+
+### Runs on Linux, macOS, and Windows
+
+The session manager IPC auto-selects the right transport per platform — zero app-side changes.
+
+| Platform | Default transport | Endpoint URI |
+|---|---|---|
+| Linux / macOS | Unix-domain socket | `unix://<storage_path('app/opcua-session-manager.sock')>` |
+| Windows | TCP loopback | `tcp://127.0.0.1:9990` |
+
+`config/opcua.php → session_manager.socket_path` defaults to the platform-appropriate URI. Override by setting `OPCUA_SOCKET_PATH` in `.env` to either a `unix://<path>`, a `tcp://127.0.0.1:<port>` (loopback-only — non-loopback hosts are refused on both client and daemon sides), or a scheme-less path (= `unix://<path>`, backwards-compatible with pre-v4.2.0 configs).
 
 </td>
 </tr>

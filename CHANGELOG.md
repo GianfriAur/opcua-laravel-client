@@ -1,5 +1,28 @@
 # Changelog
 
+## [4.2.0] - 2026-04-17
+
+### Changed
+
+- Bumped `php-opcua/opcua-client` from `^4.1.1` to `^4.2.0` and `php-opcua/opcua-session-manager` from `^4.1` to `^4.2.0`. Picks up the Kernel + ServiceModule architecture, the Wire-serialization pipeline, the describe/invoke IPC commands that make third-party modules reachable through `ManagedClient::__call()`, and the cross-platform IPC transport (Unix socket on Linux/macOS, TCP loopback on Windows).
+- Relocated DTO imports in `src/Facades/Opcua.php`: `BrowsePathResult`, `BrowseResultSet`, `CallResult`, `MonitoredItemModifyResult`, `MonitoredItemResult`, `PublishResult`, `SetTriggeringResult`, `SubscriptionResult`, `TransferResult` now live in their module namespaces (`PhpOpcua\Client\Module\*`) rather than `PhpOpcua\Client\Types\*`. No behaviour change — only the fully-qualified class names moved.
+
+### Added
+
+- **Cross-platform session manager out of the box.** `config/opcua.php → session_manager.socket_path` now accepts:
+  - `unix://<path>` (explicit Unix-domain socket)
+  - `tcp://127.0.0.1:<port>` (loopback-only — non-loopback hosts are refused by `TcpLoopbackTransport` on the client and by `SessionManagerDaemon` on the daemon)
+  - scheme-less path (interpreted as `unix://<path>`, backwards-compatible with pre-v4.2.0 configs)
+
+  Default value is platform-aware: `storage_path('app/opcua-session-manager.sock')` on Linux/macOS, `tcp://127.0.0.1:9990` on Windows. `OpcuaManager::isSessionManagerRunning()` and `OpcuaManager::shouldUseSessionManager()` now inspect the endpoint URI via `TransportFactory::toUnixPath()` — for Unix endpoints they keep the historical `file_exists($socketPath)` check; TCP endpoints can't be filesystem-probed, so presence is assumed (a missing daemon surfaces as a clear `DaemonException` on the first IPC call).
+- **`php artisan opcua:session-manager` reflects the endpoint kind.** The startup table shows "Endpoint" instead of "Socket", and the "Socket Mode" row is only printed for Unix-socket endpoints. `mkdir -p` for the parent directory is skipped for TCP endpoints.
+
+### Tests / CI
+
+- CI workflow aligned with `opcua-client` / `opcua-session-manager`: `unit` job cross-OS on `ubuntu-latest` / `macos-latest` / `windows-latest` × PHP 8.2–8.5 × Laravel 11/12/13 (with the existing exclusion matrix); `integration` job stays Ubuntu-only (Docker-hosted OPC UA servers) with `needs: unit` gating. `[DOC]` commits skip CI. `codecov/codecov-action` bumped from `v5` to `v6`.
+- Unit tests (`tests/Unit/`) are fully cross-OS. Integration tests (`tests/Integration/`) remain Docker-dependent and run only in the integration job.
+- Full suite: **359 passing, 1 skipped, 0 failing** on Linux.
+
 ## [4.1.1] - 2026-04-13
 
 ### Fixed

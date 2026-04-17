@@ -16,6 +16,7 @@
 - Named connections — define multiple OPC UA servers in config/opcua.php
 - Ad-hoc connections — Opcua::connectTo() for runtime endpoints
 - Transparent session management — daemon available → ManagedClient; not → direct Client
+- Cross-platform IPC (v4.2.0) — session manager endpoint auto-selected per OS (Unix socket on Linux/macOS, TCP loopback on Windows). Override via OPCUA_SOCKET_PATH with unix://, tcp://127.0.0.1:port (loopback-only), or a scheme-less path (= unix://)
 - String NodeIds everywhere — 'i=2259', 'ns=2;s=MyNode'
 - Fluent Builder API — readMulti(), writeMulti(), createMonitoredItems(), translateBrowsePaths()
 - PSR-3 Logging — Laravel log channel injected automatically

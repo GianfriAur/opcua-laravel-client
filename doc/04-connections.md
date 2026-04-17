@@ -126,10 +126,12 @@ $manager = app('opcua');
 
 ## Session Manager Auto-Detection
 
-When creating a client, `OpcuaManager` checks for the daemon's Unix socket:
+When creating a client, `OpcuaManager` checks for the daemon's IPC endpoint:
 
 1. `session_manager.enabled` is `true` (default)
-2. `session_manager.socket_path` file exists
+2. For `unix://<path>` endpoints: the socket file must exist. For `tcp://127.0.0.1:<port>` endpoints: presence is assumed (the first IPC call surfaces a clear `DaemonException` if the daemon is not running — TCP endpoints can't be filesystem-probed).
+
+The endpoint is auto-selected per OS by `TransportFactory::defaultEndpoint()`: Unix-domain socket on Linux/macOS, TCP loopback on Windows. Override via `OPCUA_SOCKET_PATH` in `.env`.
 
 If both conditions are met, a `ManagedClient` (daemon-proxied) is created. Otherwise, a direct `Client` is created. This is transparent — your application code doesn't change.
 

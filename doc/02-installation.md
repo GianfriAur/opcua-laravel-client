@@ -56,7 +56,7 @@ Set `OPCUA_CONNECTION` to switch the default connection name.
 | Key | Env | Default | Description |
 |-----|-----|---------|-------------|
 | `enabled` | `OPCUA_SESSION_MANAGER_ENABLED` | `true` | Enable daemon auto-detection |
-| `socket_path` | `OPCUA_SOCKET_PATH` | `storage/app/opcua-session-manager.sock` | Unix socket path |
+| `socket_path` | `OPCUA_SOCKET_PATH` | per-OS (`unix://<storage_path('app/opcua-session-manager.sock')>` on Linux/macOS, `tcp://127.0.0.1:9990` on Windows) | IPC endpoint URI: `unix://<path>`, `tcp://127.0.0.1:<port>` (loopback-only), or scheme-less path (= `unix://<path>`) |
 | `timeout` | `OPCUA_SESSION_TIMEOUT` | `600` | Session inactivity timeout (seconds) |
 | `cleanup_interval` | `OPCUA_CLEANUP_INTERVAL` | `30` | Expired session check interval |
 | `auth_token` | `OPCUA_AUTH_TOKEN` | `null` | Shared secret for daemon IPC |

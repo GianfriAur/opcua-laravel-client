@@ -2,6 +2,14 @@
 
 > **A note on versioning:** We're aware of the rapid major releases in a short time frame. This library is under active, full-time development right now — the goal is to reach a production-stable state as quickly as possible. Breaking changes are being bundled and shipped deliberately to avoid dragging them out across many minor releases. Once the API surface settles, major version bumps will become rare. Thanks for your patience.
 
+## v4.2.0 — 2026-04-17
+
+- [x] Bumped `php-opcua/opcua-client` to `^4.2.0` and `php-opcua/opcua-session-manager` to `^4.2.0`.
+- [x] Relocated 9 DTO imports in `Facades/Opcua.php` from `Types\` to their module namespaces (`Module\Subscription\*`, `Module\Browse\BrowseResultSet`, `Module\ReadWrite\CallResult`, `Module\TranslateBrowsePath\BrowsePathResult`). No behaviour change.
+- [x] **Cross-OS session manager IPC** — `session_manager.socket_path` accepts `unix://`, `tcp://127.0.0.1:<port>` (loopback-only), or a scheme-less path (BC = `unix://`). Default is platform-aware via `TransportFactory::defaultEndpoint()`: Unix socket on Linux/macOS, TCP loopback on Windows. `OpcuaManager::isSessionManagerRunning()` and `shouldUseSessionManager()` inspect the endpoint kind via `TransportFactory::toUnixPath()`.
+- [x] `php artisan opcua:session-manager` adapts its startup table (Endpoint label, Socket Mode shown only for Unix endpoints) and skips `mkdir` for TCP endpoints.
+- [x] CI workflow aligned with `opcua-client`: `unit` cross-OS × PHP 8.2–8.5 × Laravel 11/12/13; `integration` Ubuntu-only with `needs: unit`; `[DOC]` commit skip; `codecov-action` v5 → v6.
+
 ## Planned
 
 ### Features
